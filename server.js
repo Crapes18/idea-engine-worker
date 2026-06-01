@@ -72,7 +72,7 @@ app.post('/build', auth, async (req, res) => {
 
   try {
     const { founderNotes, monetization, gameName, gameDescription } = req.body
-    if (jobType === 'prototype') await buildPrototype(ideaId, { founderNotes, monetization })
+    if (jobType === 'prototype') await buildPrototype(ideaId, { founderNotes, founderAvoid: req.body.founderAvoid, imageUrls: req.body.imageUrls, monetization })
     else if (jobType === 'add_game') await addGame(ideaId, gameName, gameDescription)
     else console.warn(`[worker] Unknown jobType: ${jobType}`)
   } catch (err) {
@@ -81,7 +81,7 @@ app.post('/build', auth, async (req, res) => {
   }
 })
 
-async function buildPrototype(ideaId, { founderNotes, monetization } = {}) {
+async function buildPrototype(ideaId, { founderNotes, founderAvoid, imageUrls, monetization } = {}) {
   console.log(`[prototype] Starting for idea ${ideaId}`)
 
   const [idea, brief] = await Promise.all([getIdea(ideaId), getBrief(ideaId)])
@@ -100,6 +100,8 @@ async function buildPrototype(ideaId, { founderNotes, monetization } = {}) {
     oneLiner: idea.one_liner,
     brief,
     founderNotes,
+    founderAvoid,
+    imageUrls,
     monetization,
   })
   console.log(`[prototype] Generated ${files.length} files`)
