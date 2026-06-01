@@ -71,8 +71,9 @@ app.post('/build', auth, async (req, res) => {
   res.json({ accepted: true, ideaId, jobType })
 
   try {
-    if (jobType === 'prototype') await buildPrototype(ideaId)
-    else if (jobType === 'add_game') await addGame(ideaId, req.body.gameName, req.body.gameDescription)
+    const { founderNotes, monetization, gameName, gameDescription } = req.body
+    if (jobType === 'prototype') await buildPrototype(ideaId, { founderNotes, monetization })
+    else if (jobType === 'add_game') await addGame(ideaId, gameName, gameDescription)
     else console.warn(`[worker] Unknown jobType: ${jobType}`)
   } catch (err) {
     console.error(`[worker] Job failed for ${ideaId}:`, err)
@@ -80,7 +81,7 @@ app.post('/build', auth, async (req, res) => {
   }
 })
 
-async function buildPrototype(ideaId) {
+async function buildPrototype(ideaId, { founderNotes, monetization } = {}) {
   console.log(`[prototype] Starting for idea ${ideaId}`)
 
   const [idea, brief] = await Promise.all([getIdea(ideaId), getBrief(ideaId)])
@@ -90,11 +91,16 @@ async function buildPrototype(ideaId) {
 
   // 1. Generate app files with Claude
   console.log(`[prototype] Generating files for "${idea.name}"...`)
+  if (founderNotes) console.log(`[prototype] Founder notes: ${founderNotes}`)
+  if (monetization) console.log(`[prototype] Chosen monetization: ${monetization}`)
+
   const files = await generatePrototype({
     name: idea.name,
     slug: idea.slug,
     oneLiner: idea.one_liner,
     brief,
+    founderNotes,
+    monetization,
   })
   console.log(`[prototype] Generated ${files.length} files`)
 
