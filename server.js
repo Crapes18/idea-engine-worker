@@ -1,7 +1,7 @@
 import express from 'express'
 import { generatePrototype, generateGameData, generateReleaseNotes } from './lib/generate.js'
 import { createRepo, pushFiles, repoUrl, readFile, updateFile } from './lib/github.js'
-import { createProject, getDeploymentUrl } from './lib/vercel.js'
+import { createProject, triggerAndWaitForDeploy } from './lib/vercel.js'
 import {
   getIdea, getBrief, setStatus, createApproval
 } from './lib/supabase.js'
@@ -114,7 +114,7 @@ async function buildPrototype(ideaId) {
 
   // 5. Wait for Vercel to deploy
   console.log(`[prototype] Waiting for Vercel deployment...`)
-  const deployUrl = await getDeploymentUrl(idea.slug)
+  const deployUrl = await triggerAndWaitForDeploy(idea.slug)
   console.log(`[prototype] Deployed: ${deployUrl}`)
 
   // 6. Create approval in dashboard
