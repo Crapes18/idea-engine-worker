@@ -73,6 +73,7 @@ app.post('/build', auth, async (req, res) => {
   try {
     const { founderNotes, monetization, gameName, gameDescription } = req.body
     if (jobType === 'prototype') await buildPrototype(ideaId, { founderNotes, founderAvoid: req.body.founderAvoid, imageUrls: req.body.imageUrls, monetization })
+    else if (jobType === 'revise_prototype') await revisePrototype(ideaId, { founderNotes, founderAvoid: req.body.founderAvoid, imageUrls: req.body.imageUrls, previousDeployUrl: req.body.previousDeployUrl })
     else if (jobType === 'add_game') await addGame(ideaId, gameName, gameDescription)
     else console.warn(`[worker] Unknown jobType: ${jobType}`)
   } catch (err) {
@@ -136,6 +137,49 @@ async function buildPrototype(ideaId, { founderNotes, founderAvoid, imageUrls, m
 
   await setStatus(ideaId, 'in_review')
   console.log(`[prototype] Done for "${idea.name}" — ${deployUrl}`)
+}
+
+async function revisePrototype(ideaId, { founderNotes, founderAvoid, imageUrls, previousDeployUrl } = {}) {
+  console.log(`[revise] Starting revision for idea ${ideaId}`)
+  await setStatus(ideaId, 'building')
+
+  const [idea, brief] = await Promise.all([getIdea(ideaId), getBrief(ideaId)])
+  if (!idea) throw new Error('Idea not found')
+
+  if (founderNotes) console.log(`[revise] What to change: ${founderNotes}`)
+  if (imageUrls?.length) console.log(`[revise] ${imageUrls.length} visual reference(s) provided`)
+
+  console.log(`[revise] Generating revised files for "${idea.name}"...`)
+  const files = await generatePrototype({
+    name: idea.name,
+    slug: idea.slug,
+    oneLiner: idea.one_liner,
+    brief,
+    founderNotes: [
+      previousDeployUrl ? `This is a REVISION of the previous prototype at ${previousDeployUrl}` : null,
+      founderNotes || null,
+    ].filter(Boolean).join('\n'),
+    founderAvoid,
+    imageUrls,
+  })
+
+  console.log(`[revise] Generated ${files.length} files — pushing to GitHub...`)
+  await pushFiles(idea.slug, files)
+  const githubUrl = repoUrl(idea.slug)
+
+  const deployUrl = await triggerAndWaitForDeploy(ROG_VERCEL_PROJECT || idea.slug)
+  console.log(`[revise] Deployed: ${deployUrl}`)
+
+  await createApproval({
+    ideaId,
+    stage: 'prototype',
+    type: 'prototype',
+    summary: `"${idea.name}" revised prototype is live. Review the changes and approve to advance to Build, or request further changes.`,
+    payload: { deployUrl, githubUrl, fileCount: files.length, isRevision: true },
+  })
+
+  await setStatus(ideaId, 'in_review')
+  console.log(`[revise] Done for "${idea.name}" — ${deployUrl}`)
 }
 
 async function addGame(ideaId, gameName, gameDescription) {
