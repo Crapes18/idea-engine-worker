@@ -21,6 +21,44 @@ function auth(req, res, next) {
 // Health check
 app.get('/health', (req, res) => res.json({ status: 'ok' }))
 
+// Diagnostic endpoint
+app.get('/test', auth, async (req, res) => {
+  const results = {}
+
+  // Test Anthropic
+  try {
+    const Anthropic = (await import('@anthropic-ai/sdk')).default
+    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+    await client.messages.create({ model: 'claude-haiku-4-5-20251001', max_tokens: 5, messages: [{ role: 'user', content: 'hi' }] })
+    results.anthropic = 'OK'
+  } catch (e) { results.anthropic = e.message }
+
+  // Test Supabase
+  try {
+    const { createClient } = await import('@supabase/supabase-js')
+    const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY)
+    const { error } = await sb.from('ideas').select('id').limit(1)
+    results.supabase = error ? error.message : 'OK'
+  } catch (e) { results.supabase = e.message }
+
+  // Test GitHub
+  try {
+    const r = await fetch('https://api.github.com/user', { headers: { Authorization: `Bearer ${process.env.GITHUB_TOKEN}` } })
+    const d = await r.json()
+    results.github = d.login ? `OK (${d.login})` : d.message
+  } catch (e) { results.github = e.message }
+
+  results.env = {
+    hasAnthropicKey: !!process.env.ANTHROPIC_API_KEY,
+    anthropicKeyPrefix: process.env.ANTHROPIC_API_KEY?.slice(0, 20),
+    hasSupabaseUrl: !!process.env.SUPABASE_URL,
+    hasGithubToken: !!process.env.GITHUB_TOKEN,
+    hasVercelToken: !!process.env.VERCEL_TOKEN,
+  }
+
+  res.json(results)
+})
+
 // Main build endpoint
 app.post('/build', auth, async (req, res) => {
   const { ideaId, jobType } = req.body
