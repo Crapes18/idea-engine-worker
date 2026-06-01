@@ -132,6 +132,7 @@ async function buildPrototype(ideaId) {
 
 async function addGame(ideaId, gameName, gameDescription) {
   console.log(`[add_game] Starting for game: ${gameName}`)
+  await setStatus(ideaId, 'building')
 
   // 1. Generate game data with Claude
   const gameData = await generateGameData(gameName, gameDescription)
