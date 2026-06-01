@@ -1,10 +1,13 @@
 import express from 'express'
-import { generatePrototype } from './lib/generate.js'
-import { createRepo, pushFiles, repoUrl } from './lib/github.js'
+import { generatePrototype, generateGameData, generateReleaseNotes } from './lib/generate.js'
+import { createRepo, pushFiles, repoUrl, readFile, updateFile } from './lib/github.js'
 import { createProject, getDeploymentUrl } from './lib/vercel.js'
 import {
   getIdea, getBrief, setStatus, createApproval
 } from './lib/supabase.js'
+
+const ROG_REPO = process.env.ROG_REPO || 'rules-of-games'
+const ROG_VERCEL_PROJECT = process.env.ROG_VERCEL_PROJECT || 'app'
 
 const app = express()
 app.use(express.json())
@@ -69,6 +72,7 @@ app.post('/build', auth, async (req, res) => {
 
   try {
     if (jobType === 'prototype') await buildPrototype(ideaId)
+    else if (jobType === 'add_game') await addGame(ideaId, req.body.gameName, req.body.gameDescription)
     else console.warn(`[worker] Unknown jobType: ${jobType}`)
   } catch (err) {
     console.error(`[worker] Job failed for ${ideaId}:`, err)
@@ -124,6 +128,84 @@ async function buildPrototype(ideaId) {
 
   await setStatus(ideaId, 'in_review')
   console.log(`[prototype] Done for "${idea.name}" — ${deployUrl}`)
+}
+
+async function addGame(ideaId, gameName, gameDescription) {
+  console.log(`[add_game] Starting for game: ${gameName}`)
+
+  // 1. Generate game data with Claude
+  const gameData = await generateGameData(gameName, gameDescription)
+
+  // 2. Read current games.ts from GitHub
+  console.log(`[add_game] Reading games.ts from ${ROG_REPO}...`)
+  const { content: gamesTs, sha } = await readFile(ROG_REPO, 'lib/games.ts')
+
+  // 3. Read package.json for current version
+  const { content: pkgJson, sha: pkgSha } = await readFile(ROG_REPO, 'package.json')
+  const pkg = JSON.parse(pkgJson)
+  const currentVersion = pkg.version || '1.0.0'
+
+  // 4. Insert new game into games array (before the closing bracket)
+  const gameEntry = `  {
+    slug: '${gameData.slug}',
+    name: '${gameData.name}',
+    category: '${gameData.category}',
+    players: '${gameData.players}',
+    duration: '${gameData.duration}',
+    description: '${gameData.description.replace(/'/g, "\\'")}',
+    quickRef: [
+${gameData.quickRef.map(r => `      '${r.replace(/'/g, "\\'")}'`).join(',\n')}
+    ],
+    rules: [
+${gameData.rules.map(r => `      { title: '${r.title.replace(/'/g, "\\'")}', body: '${r.body.replace(/'/g, "\\'")}' }`).join(',\n')}
+    ],
+    tools: [${gameData.tools.map(t => `'${t}'`).join(', ')}],
+  },`
+
+  // Find the closing of the games array and insert before it
+  const insertMarker = '\n]\n\nexport function getGame'
+  if (!gamesTs.includes(insertMarker)) {
+    throw new Error('Could not find insertion point in games.ts')
+  }
+  const updatedGamesTs = gamesTs.replace(insertMarker, `\n${gameEntry}${insertMarker}`)
+
+  // 5. Bump version in package.json
+  const [major, minor, patch] = currentVersion.split('.').map(Number)
+  const newVersion = `${major}.${minor}.${patch + 1}`
+  const updatedPkg = JSON.stringify({ ...pkg, version: newVersion }, null, 2) + '\n'
+
+  // 6. Commit both files
+  console.log(`[add_game] Committing ${gameName} to GitHub (v${newVersion})...`)
+  await updateFile(ROG_REPO, 'lib/games.ts', updatedGamesTs, sha, `feat: add ${gameName} rules`)
+  const { content: _, sha: newPkgSha } = await readFile(ROG_REPO, 'package.json')
+  await updateFile(ROG_REPO, 'package.json', updatedPkg, newPkgSha, `chore: bump version to ${newVersion}`)
+
+  // 7. Wait for Vercel to deploy
+  console.log(`[add_game] Waiting for Vercel deploy...`)
+  const deployUrl = await getDeploymentUrl(ROG_VERCEL_PROJECT)
+  console.log(`[add_game] Deployed: ${deployUrl}`)
+
+  // 8. Generate release notes
+  console.log(`[add_game] Generating release notes...`)
+  const release = await generateReleaseNotes(gameName, currentVersion)
+
+  // 9. Create release_ready approval
+  await createApproval({
+    ideaId,
+    stage: 'live',
+    type: 'release_ready',
+    summary: `"${gameName}" has been added and deployed. Review the release notes, test the live app, then mark as shipped.`,
+    payload: {
+      gameName,
+      deployUrl,
+      githubUrl: `https://github.com/Crapes18/${ROG_REPO}`,
+      releaseNotes: release.releaseNotes,
+      testChecklist: release.testChecklist,
+      versionBump: release.version,
+    },
+  })
+
+  console.log(`[add_game] Done — ${gameName} is live at ${deployUrl}`)
 }
 
 const PORT = process.env.PORT || 3001
