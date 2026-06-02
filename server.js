@@ -1,5 +1,8 @@
 import express from 'express'
-import { generatePrototype, generateGameData, generateReleaseNotes } from './lib/generate.js'
+import { generateGameData, generateReleaseNotes } from './lib/generate.js'
+import { generateQuizExplorerContent } from './lib/content-gen.js'
+import { applyTemplate, detectTemplate, TEMPLATE_IDS } from './lib/templates.js'
+import { validateHTML } from './lib/validate.js'
 import { createRepo, pushFiles, repoUrl, readFile, updateFile, enableGitHubPages } from './lib/github.js'
 import { createProject, triggerAndWaitForDeploy } from './lib/vercel.js'
 import {
@@ -77,9 +80,17 @@ app.post('/build', auth, async (req, res) => {
     else if (jobType === 'add_game') await addGame(ideaId, gameName, gameDescription)
     else console.warn(`[worker] Unknown jobType: ${jobType}`)
   } catch (err) {
-    console.error(`[worker] Job failed for ${ideaId}:`, err)
-    // Clear building_context alongside resetting to draft
+    const errMsg = err?.message || String(err)
+    console.error(`[worker] Job failed for ${ideaId}:`, errMsg)
     await setStatus(ideaId, 'draft', null).catch(e => console.warn('[worker] Failed to reset status:', e.message))
+    // Create a build_failed approval so the error is visible in the dashboard
+    await createApproval({
+      ideaId,
+      stage: 'prototype',
+      type: 'build_failed',
+      summary: `Build failed: ${errMsg.slice(0, 200)}`,
+      payload: { error: errMsg, jobType: req?.body?.jobType || 'unknown', timestamp: new Date().toISOString() },
+    }).catch(() => {})
   }
 })
 
@@ -93,124 +104,82 @@ app.post('/recover', auth, async (req, res) => {
 recoverStuckBuilds().catch(() => {})
 setInterval(() => recoverStuckBuilds().catch(() => {}), 10 * 60 * 1000)
 
-async function buildPrototype(ideaId, { founderNotes, founderAvoid, imageUrls, monetization } = {}) {
-  console.log(`[prototype] Starting for idea ${ideaId}`)
+async function buildFromTemplate(ideaId, { founderNotes, founderAvoid, imageUrls, monetization, isRevision = false } = {}) {
+  const label = isRevision ? 'revise' : 'prototype'
+  console.log(`[${label}] Starting for idea ${ideaId}`)
 
   const [idea, brief] = await Promise.all([getIdea(ideaId), getBrief(ideaId)])
   if (!idea) throw new Error('Idea not found')
 
   await setStatus(ideaId, 'building')
 
-  // 1. Generate app files with Claude
-  console.log(`[prototype] Generating files for "${idea.name}"...`)
-  if (founderNotes) console.log(`[prototype] Founder notes: ${founderNotes}`)
-  if (monetization) console.log(`[prototype] Chosen monetization: ${monetization}`)
+  // 1. Detect which template to use
+  const templateId = detectTemplate(brief, founderNotes)
+  console.log(`[${label}] Using template: ${templateId}`)
+  if (founderNotes) console.log(`[${label}] Founder notes: ${founderNotes.slice(0, 100)}`)
 
-  const files = await generatePrototype({
-    name: idea.name,
-    slug: idea.slug,
-    oneLiner: idea.one_liner,
-    brief,
-    founderNotes,
-    founderAvoid,
-    imageUrls,
-    monetization,
-  })
-  console.log(`[prototype] Generated ${files.length} files`)
-
-  // Validate HTML has real body content — reject CSS-only files
-  const htmlFile = files.find(f => f.path === 'index.html')
-  if (htmlFile) {
-    const bodyStart = htmlFile.content.indexOf('<body')
-    const bodyContent = bodyStart !== -1 ? htmlFile.content.slice(bodyStart + 5) : ''
-    const strippedContent = bodyContent.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()
-    if (strippedContent.length < 100) {
-      throw new Error(`Generated HTML has no body content (${strippedContent.length} chars after tags). CSS-only file rejected.`)
-    }
-    console.log(`[prototype] HTML validation passed — ${strippedContent.length} chars of body content`)
+  // 2. Generate content JSON (short, reliable — no HTML syntax risk)
+  console.log(`[${label}] Generating content JSON...`)
+  let appData
+  if (templateId === TEMPLATE_IDS.QUIZ_EXPLORER) {
+    appData = await generateQuizExplorerContent({ name: idea.name, brief, founderNotes, founderAvoid, imageUrls })
+  } else {
+    appData = await generateQuizExplorerContent({ name: idea.name, brief, founderNotes, founderAvoid, imageUrls })
   }
+  console.log(`[${label}] Content generated: ${appData.careers?.length || 0} careers, ${appData.categories?.length || 0} categories`)
 
-  // 2. Create GitHub repo
-  console.log(`[prototype] Creating GitHub repo: ${idea.slug}`)
+  // 3. Apply template (pre-validated HTML + JS, just inject data)
+  console.log(`[${label}] Applying template...`)
+  const html = applyTemplate(templateId, appData)
+
+  // 4. Validate generated HTML (JS syntax check via Node.js)
+  console.log(`[${label}] Validating HTML...`)
+  const validation = validateHTML(html)
+  if (!validation.valid) {
+    throw new Error(`HTML validation failed: ${validation.errors.join('; ')}`)
+  }
+  console.log(`[${label}] Validation passed`)
+
+  const files = [
+    { path: 'index.html', content: html },
+    { path: 'vercel.json', content: JSON.stringify({ buildCommand: '', outputDirectory: '.' }, null, 2) },
+  ]
+
+  // 5. Create/update GitHub repo
+  console.log(`[${label}] Creating/updating GitHub repo: ${idea.slug}`)
   await createRepo(idea.slug, idea.one_liner || idea.name)
-
-  // 3. Push files
-  console.log(`[prototype] Pushing files to GitHub...`)
   await pushFiles(idea.slug, files)
   const githubUrl = repoUrl(idea.slug)
-  console.log(`[prototype] Pushed: ${githubUrl}`)
+  console.log(`[${label}] Pushed: ${githubUrl}`)
 
-  // 4. Enable GitHub Pages (no Vercel project needed for prototypes)
-  console.log(`[prototype] Enabling GitHub Pages...`)
+  // 6. Enable GitHub Pages and wait for it to be live
+  console.log(`[${label}] Enabling GitHub Pages...`)
   const deployUrl = await enableGitHubPages(idea.slug)
-  console.log(`[prototype] Pages URL: ${deployUrl}`)
+  console.log(`[${label}] Live at: ${deployUrl}`)
 
-  // 6. Create approval in dashboard
+  // 7. Create approval
+  const summary = isRevision
+    ? `"${idea.name}" revised prototype is live. Review and approve to advance, or request further changes.`
+    : `"${idea.name}" prototype is live and ready for review.`
+
   await createApproval({
     ideaId,
     stage: 'prototype',
     type: 'prototype',
-    summary: `"${idea.name}" prototype is live and ready for review. ${deployUrl}`,
-    payload: { deployUrl, githubUrl, fileCount: files.length },
+    summary,
+    payload: { deployUrl, githubUrl, templateId, isRevision },
   })
 
-  await setStatus(ideaId, 'in_review')
-  console.log(`[prototype] Done for "${idea.name}" — ${deployUrl}`)
+  await setStatus(ideaId, 'in_review', null)
+  console.log(`[${label}] Done for "${idea.name}" — ${deployUrl}`)
 }
 
-async function revisePrototype(ideaId, { founderNotes, founderAvoid, imageUrls, previousDeployUrl } = {}) {
-  console.log(`[revise] Starting revision for idea ${ideaId}`)
-  await setStatus(ideaId, 'building')
+async function buildPrototype(ideaId, opts = {}) {
+  return buildFromTemplate(ideaId, { ...opts, isRevision: false })
+}
 
-  const [idea, brief] = await Promise.all([getIdea(ideaId), getBrief(ideaId)])
-  if (!idea) throw new Error('Idea not found')
-
-  if (founderNotes) console.log(`[revise] What to change: ${founderNotes}`)
-  if (imageUrls?.length) console.log(`[revise] ${imageUrls.length} visual reference(s) provided`)
-
-  console.log(`[revise] Generating revised files for "${idea.name}"...`)
-  const files = await generatePrototype({
-    name: idea.name,
-    slug: idea.slug,
-    oneLiner: idea.one_liner,
-    brief,
-    founderNotes: [
-      previousDeployUrl ? `This is a REVISION of the previous prototype at ${previousDeployUrl}` : null,
-      founderNotes || null,
-    ].filter(Boolean).join('\n'),
-    founderAvoid,
-    imageUrls,
-  })
-
-  // Validate HTML body content before pushing
-  const htmlFile = files.find(f => f.path === 'index.html')
-  if (htmlFile) {
-    const bodyStart = htmlFile.content.indexOf('<body')
-    const strippedContent = (bodyStart !== -1 ? htmlFile.content.slice(bodyStart + 5) : '').replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()
-    if (strippedContent.length < 100) {
-      throw new Error(`Revised HTML has no body content (${strippedContent.length} chars). CSS-only file rejected.`)
-    }
-    console.log(`[revise] HTML validation passed — ${strippedContent.length} chars of body content`)
-  }
-
-  console.log(`[revise] Generated ${files.length} files — pushing to GitHub...`)
-  await pushFiles(idea.slug, files)
-  const githubUrl = repoUrl(idea.slug)
-
-  console.log(`[revise] Enabling GitHub Pages...`)
-  const deployUrl = await enableGitHubPages(idea.slug)
-  console.log(`[revise] Pages URL: ${deployUrl}`)
-
-  await createApproval({
-    ideaId,
-    stage: 'prototype',
-    type: 'prototype',
-    summary: `"${idea.name}" revised prototype is live. Review the changes and approve to advance to Build, or request further changes.`,
-    payload: { deployUrl, githubUrl, fileCount: files.length, isRevision: true },
-  })
-
-  await setStatus(ideaId, 'in_review')
-  console.log(`[revise] Done for "${idea.name}" — ${deployUrl}`)
+async function revisePrototype(ideaId, opts = {}) {
+  return buildFromTemplate(ideaId, { ...opts, isRevision: true })
 }
 
 async function addGame(ideaId, gameName, gameDescription) {

@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{APP_TITLE}}</title>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Geist",sans-serif;background:#FEF9F0;min-height:100vh}
+.hidden{display:none!important}
+.btn{border:none;cursor:pointer;font-family:inherit;transition:transform 0.1s}
+.btn:active{transform:scale(0.97)}
+.back-btn{background:none;border:none;color:#888;font-size:15px;cursor:pointer;padding:8px 0;display:flex;align-items:center;gap:6px;font-family:inherit;margin-bottom:16px}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+</style>
+</head>
+<body>
+
+<!-- HOME -->
+<div id="screen-home" style="min-height:100vh;background:linear-gradient(160deg,#FF6B6B 0%,#FF8E53 40%,#FFD93D 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;text-align:center">
+  <div style="font-size:80px;margin-bottom:16px;animation:bounce 2s infinite" id="home-emoji">🌟</div>
+  <h1 id="home-title" style="color:#fff;font-size:38px;font-weight:900;letter-spacing:-1px;margin-bottom:12px;text-shadow:0 2px 12px rgba(0,0,0,0.15)"></h1>
+  <p id="home-subtitle" style="color:rgba(255,255,255,0.92);font-size:18px;margin-bottom:40px;max-width:360px;line-height:1.5"></p>
+  <div style="display:flex;flex-direction:column;gap:14px;width:100%;max-width:320px">
+    <button class="btn" id="btn-quiz" style="background:#fff;color:#FF6B6B;border:none;border-radius:99px;padding:18px 44px;font-size:20px;font-weight:800;box-shadow:0 8px 32px rgba(0,0,0,0.15)"></button>
+    <button class="btn" id="btn-explore" style="background:rgba(255,255,255,0.2);color:#fff;border:2px solid rgba(255,255,255,0.7);border-radius:99px;padding:16px 44px;font-size:17px;font-weight:700"></button>
+  </div>
+</div>
+
+<!-- CATEGORIES -->
+<div id="screen-categories" class="hidden" style="padding:24px;max-width:580px;margin:0 auto">
+  <h2 id="cat-title" style="font-size:24px;font-weight:800;color:#1A1A1A;margin-bottom:6px"></h2>
+  <p id="cat-subtitle" style="color:#888;margin-bottom:20px"></p>
+  <div id="cat-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px"></div>
+  <button class="back-btn" id="cat-back" style="margin-top:20px">← Back</button>
+</div>
+
+<!-- CAREER LIST -->
+<div id="screen-list" class="hidden" style="padding:24px;max-width:580px;margin:0 auto">
+  <button class="back-btn" id="list-back">← All Categories</button>
+  <div id="list-header" style="margin-bottom:20px"></div>
+  <div id="list-grid"></div>
+</div>
+
+<!-- CAREER DETAIL -->
+<div id="screen-detail" class="hidden" style="padding:24px;max-width:580px;margin:0 auto">
+  <button class="back-btn" id="detail-back">← Back</button>
+  <div id="detail-content"></div>
+</div>
+
+<!-- QUIZ SCREENS (rendered dynamically) -->
+<div id="screen-q1" class="hidden"></div>
+<div id="screen-q2" class="hidden"></div>
+<div id="screen-q3" class="hidden"></div>
+
+<!-- RESULT -->
+<div id="screen-result" class="hidden" style="padding:24px;max-width:520px;margin:0 auto">
+  <div id="result-hero" style="border-radius:24px;padding:28px;text-align:center;margin-bottom:20px">
+    <div id="result-emoji" style="font-size:64px;margin-bottom:12px"></div>
+    <h2 id="result-title" style="font-size:26px;font-weight:900;margin-bottom:10px"></h2>
+    <p id="result-desc" style="font-size:15px;line-height:1.6;opacity:0.9"></p>
+  </div>
+  <h3 id="result-jobs-title" style="font-size:16px;font-weight:800;color:#1A1A1A;margin-bottom:12px"></h3>
+  <div id="result-jobs" style="margin-bottom:24px"></div>
+  <div style="display:flex;gap:10px">
+    <button class="btn" id="btn-retry" style="flex:1;background:#1A1A1A;color:#fff;border-radius:14px;padding:14px;font-size:15px;font-weight:700"></button>
+    <button class="btn" id="btn-explore-result" style="flex:1;background:#F0E8FF;color:#6600BB;border-radius:14px;padding:14px;font-size:15px;font-weight:700"></button>
+  </div>
+</div>
+
+<script>
+// ── App data injected by build system ────────────────────────────────────────
+var APP_DATA = {{APP_DATA_JSON}};
+
+// ── Screen router ─────────────────────────────────────────────────────────────
+var SCREENS = ["home","categories","list","detail","q1","q2","q3","result"];
+function show(name) {
+  SCREENS.forEach(function(s) {
+    var el = document.getElementById("screen-" + s);
+    if (el) el.classList.add("hidden");
+  });
+  var target = document.getElementById("screen-" + name);
+  if (target) target.classList.remove("hidden");
+  window.scrollTo(0, 0);
+}
+
+// ── Quiz state ────────────────────────────────────────────────────────────────
+var quizAnswers = [];
+
+// ── Build home screen ─────────────────────────────────────────────────────────
+function buildHome() {
+  var h = APP_DATA.home;
+  if (document.getElementById("home-emoji")) document.getElementById("home-emoji").textContent = h.emoji || "🌟";
+  document.getElementById("home-title").textContent = h.title;
+  document.getElementById("home-subtitle").textContent = h.subtitle;
+  var btnQuiz = document.getElementById("btn-quiz");
+  btnQuiz.textContent = h.quiz_button || "Take the Quiz! ✨";
+  btnQuiz.addEventListener("click", function() { show("q1"); });
+  var btnExplore = document.getElementById("btn-explore");
+  btnExplore.textContent = h.explore_button || "Explore All Jobs 🗺️";
+  btnExplore.addEventListener("click", function() { show("categories"); });
+}
+
+// ── Build categories screen ───────────────────────────────────────────────────
+function buildCategories() {
+  document.getElementById("cat-title").textContent = APP_DATA.categories_screen.title || "Pick a Category";
+  document.getElementById("cat-subtitle").textContent = APP_DATA.categories_screen.subtitle || "Tap any to see the jobs inside";
+  document.getElementById("cat-back").addEventListener("click", function() { show("home"); });
+
+  var grid = document.getElementById("cat-grid");
+  APP_DATA.categories.forEach(function(cat) {
+    var btn = document.createElement("button");
+    btn.className = "btn";
+    btn.style.cssText = "background:" + cat.bg + ";border:none;border-radius:20px;padding:20px 16px;text-align:left;cursor:pointer;width:100%";
+    btn.innerHTML = '<div style="font-size:36px;margin-bottom:8px">' + cat.emoji + '</div>' +
+      '<div style="font-size:16px;font-weight:800;color:' + cat.color + '">' + cat.name + '</div>' +
+      '<div style="font-size:12px;color:#888;margin-top:2px">' + (cat.tagline || "") + '</div>';
+    btn.setAttribute("data-catid", cat.id);
+    btn.addEventListener("click", function() { showCategory(this.getAttribute("data-catid")); });
+    grid.appendChild(btn);
+  });
+}
+
+// ── Show a category's career list ─────────────────────────────────────────────
+function showCategory(catId) {
+  var cat = APP_DATA.categories.find(function(c) { return c.id === catId; });
+  if (!cat) return;
+
+  document.getElementById("list-header").innerHTML =
+    '<div style="display:flex;align-items:center;gap:12px;padding:16px 20px;background:' + cat.bg + ';border-radius:16px;margin-bottom:4px">' +
+    '<span style="font-size:36px">' + cat.emoji + '</span>' +
+    '<div><div style="font-size:20px;font-weight:800;color:' + cat.color + '">' + cat.name + '</div>' +
+    '<div style="font-size:13px;color:#888">Tap any job to learn more</div></div></div>';
+
+  var grid = document.getElementById("list-grid");
+  grid.innerHTML = "";
+  APP_DATA.careers.filter(function(c) { return c.cat === catId; }).forEach(function(job) {
+    var btn = document.createElement("button");
+    btn.className = "btn";
+    btn.style.cssText = "background:#fff;border:1px solid #E8E8E4;border-radius:14px;padding:16px;text-align:left;display:flex;align-items:center;gap:14px;cursor:pointer;width:100%;margin-bottom:8px";
+    btn.innerHTML = '<span style="font-size:32px;flex-shrink:0">' + job.emoji + '</span>' +
+      '<div style="flex:1;min-width:0">' +
+      '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">' +
+      '<span style="font-size:15px;font-weight:700;color:#1A1A1A">' + job.name + '</span>' +
+      (job.future ? '<span style="font-size:10px;font-weight:700;background:#FFD93D;color:#664400;padding:2px 7px;border-radius:99px">FUTURE JOB</span>' : "") +
+      '</div><div style="font-size:13px;color:#888;margin-top:3px">' + job.short + '</div></div>';
+    btn.setAttribute("data-jobid", job.id);
+    btn.addEventListener("click", function() { showDetail(this.getAttribute("data-jobid")); });
+    grid.appendChild(btn);
+  });
+
+  document.getElementById("list-back").onclick = function() { show("categories"); };
+  document.getElementById("detail-back").onclick = function() { show("list"); };
+  show("list");
+}
+
+// ── Show career detail ─────────────────────────────────────────────────────────
+function showDetail(jobId) {
+  var job = APP_DATA.careers.find(function(j) { return j.id === jobId; });
+  if (!job) return;
+  var cat = APP_DATA.categories.find(function(c) { return c.id === job.cat; });
+  if (!cat) return;
+
+  document.getElementById("detail-content").innerHTML =
+    '<div style="background:' + cat.bg + ';border-radius:20px;padding:24px;text-align:center;margin-bottom:20px">' +
+    '<div style="font-size:64px;margin-bottom:12px">' + job.emoji + '</div>' +
+    (job.future ? '<div style="background:#FFD93D;color:#664400;display:inline-block;padding:4px 14px;border-radius:99px;font-size:12px;font-weight:700;margin-bottom:10px">FUTURE JOB - Growing Fast!</div>' : "") +
+    '<h2 style="font-size:24px;font-weight:900;color:' + cat.color + ';margin-bottom:8px">' + job.name + '</h2>' +
+    '<p style="font-size:15px;color:' + cat.color + ';opacity:0.85;line-height:1.6">' + job.detail + '</p></div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px">' +
+    '<div style="background:#F8F8F6;border-radius:12px;padding:14px;text-align:center">' +
+    '<div style="font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#A0A0A0;margin-bottom:4px">Category</div>' +
+    '<div style="font-size:15px;font-weight:700">' + cat.emoji + " " + cat.name + '</div></div>' +
+    '<div style="background:#F8F8F6;border-radius:12px;padding:14px;text-align:center">' +
+    '<div style="font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#A0A0A0;margin-bottom:4px">Avg Salary</div>' +
+    '<div style="font-size:15px;font-weight:700">' + (job.wage || "Varies") + '</div></div></div>' +
+    '<button class="btn" id="detail-explore-more" style="width:100%;background:#1A1A1A;color:#fff;border-radius:14px;padding:14px;font-size:15px;font-weight:700">Explore More Jobs</button>';
+
+  document.getElementById("detail-explore-more").addEventListener("click", function() { show("categories"); });
+  show("detail");
+}
+
+// ── Build quiz screens ────────────────────────────────────────────────────────
+function buildQuiz() {
+  var bars = ["", "one", "two", "three"];
+  APP_DATA.quiz.forEach(function(q, idx) {
+    var screenId = "screen-q" + (idx + 1);
+    var screen = document.getElementById(screenId);
+    if (!screen) return;
+    screen.style.cssText = "padding:32px 24px;max-width:520px;margin:0 auto";
+
+    var progress = "";
+    for (var i = 0; i < 3; i++) {
+      progress += '<div style="height:6px;flex:1;background:' + (i <= idx ? "#FF6B6B" : "#E8E8E4") + ';border-radius:99px"></div>';
+    }
+
+    var answers = "";
+    q.answers.forEach(function(ans) {
+      answers += '<button class="btn quiz-ans" data-cat="' + ans.cat + '" data-qidx="' + idx + '"' +
+        ' style="background:' + (ans.bg || "#F8F8F6") + ';border:2px solid transparent;border-radius:16px;padding:14px 18px;text-align:left;font-size:16px;font-weight:600;color:#1A1A1A;display:flex;align-items:center;gap:12px;width:100%;margin-bottom:10px">' +
+        '<span style="font-size:24px">' + (ans.emoji || "") + '</span>' + ans.text + '</button>';
+    });
+
+    screen.innerHTML =
+      '<div style="display:flex;gap:6px;margin-bottom:28px">' + progress + '</div>' +
+      '<div style="font-size:48px;margin-bottom:12px">' + (q.emoji || "❓") + '</div>' +
+      '<h2 style="font-size:24px;font-weight:800;color:#1A1A1A;margin-bottom:6px">' + q.question + '</h2>' +
+      '<p style="color:#888;font-size:14px;margin-bottom:24px">' + (q.hint || "Pick your favourite!") + '</p>' +
+      '<div id="answers-' + idx + '">' + answers + '</div>' +
+      (idx === 0 ? '<button class="back-btn" id="quiz-back-' + idx + '" style="margin-top:16px">Back to Home</button>' : "");
+
+    screen.querySelectorAll(".quiz-ans").forEach(function(btn) {
+      btn.addEventListener("click", function() {
+        var cat = this.getAttribute("data-cat");
+        var qidx = parseInt(this.getAttribute("data-qidx"), 10);
+        quizAnswers[qidx] = cat;
+        if (qidx < APP_DATA.quiz.length - 1) {
+          show("q" + (qidx + 2));
+        } else {
+          showResult();
+        }
+      });
+    });
+
+    var backBtn = screen.querySelector("#quiz-back-" + idx);
+    if (backBtn) backBtn.addEventListener("click", function() { show("home"); });
+  });
+}
+
+// ── Show quiz result ──────────────────────────────────────────────────────────
+function showResult() {
+  var scores = {};
+  quizAnswers.forEach(function(cat) {
+    if (cat) scores[cat] = (scores[cat] || 0) + 1;
+  });
+  var winner = Object.keys(scores).reduce(function(a, b) { return scores[a] >= scores[b] ? a : b; }, Object.keys(scores)[0]);
+  var cat = APP_DATA.categories.find(function(c) { return c.id === winner; });
+  if (!cat) cat = APP_DATA.categories[0];
+
+  var topJobs = APP_DATA.careers.filter(function(j) { return j.cat === winner; }).slice(0, 3);
+
+  document.getElementById("result-hero").style.background = cat.bg;
+  document.getElementById("result-emoji").textContent = cat.emoji;
+  document.getElementById("result-title").textContent = APP_DATA.result_screen.title_prefix + " " + cat.name + "!";
+  document.getElementById("result-title").style.color = cat.color;
+  document.getElementById("result-desc").textContent = cat.desc;
+  document.getElementById("result-desc").style.color = cat.color;
+  document.getElementById("result-jobs-title").textContent = APP_DATA.result_screen.jobs_title || "Jobs you might love:";
+
+  var rjobs = document.getElementById("result-jobs");
+  rjobs.innerHTML = "";
+  topJobs.forEach(function(job) {
+    var div = document.createElement("div");
+    div.style.cssText = "background:#fff;border:1px solid #E8E8E4;border-radius:14px;padding:14px;display:flex;align-items:center;gap:12px;margin-bottom:10px";
+    div.innerHTML = '<span style="font-size:28px">' + job.emoji + '</span>' +
+      '<div><div style="font-size:15px;font-weight:700;color:#1A1A1A">' + job.name + '</div>' +
+      '<div style="font-size:12px;color:#888;margin-top:2px">' + job.short + '</div></div>';
+    rjobs.appendChild(div);
+  });
+
+  document.getElementById("btn-retry").textContent = APP_DATA.result_screen.retry_button || "Try Again";
+  document.getElementById("btn-retry").addEventListener("click", function() { quizAnswers = []; show("q1"); });
+  document.getElementById("btn-explore-result").textContent = APP_DATA.result_screen.explore_button || "Explore All";
+  document.getElementById("btn-explore-result").addEventListener("click", function() { show("categories"); });
+
+  show("result");
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+buildHome();
+buildCategories();
+buildQuiz();
+show("home");
+</script>
+</body>
+</html>
