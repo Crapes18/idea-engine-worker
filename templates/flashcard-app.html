@@ -54,7 +54,12 @@ body{font-family:"Geist",sans-serif;background:var(--bg);color:var(--text);min-h
   <div style="padding:24px;max-width:640px;margin:0 auto">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
       <h2 style="font-size:17px;font-weight:700;color:var(--text)">Your Decks</h2>
-      <span id="deck-count" style="font-size:13px;color:var(--text3)"></span>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span id="deck-count" style="font-size:13px;color:var(--text3)"></span>
+        <button class="btn" onclick="show('import')" style="display:flex;align-items:center;gap:6px;background:var(--primary);color:#fff;border-radius:10px;padding:8px 14px;font-size:13px;font-weight:600">
+          ＋ Import
+        </button>
+      </div>
     </div>
     <div id="deck-grid" style="display:flex;flex-direction:column;gap:12px"></div>
   </div>
@@ -118,6 +123,61 @@ body{font-family:"Geist",sans-serif;background:var(--bg);color:var(--text);min-h
   </div>
 </div>
 
+<!-- IMPORT SCREEN -->
+<div id="screen-import" class="hidden" style="padding:24px;max-width:580px;margin:0 auto">
+  <button class="back-btn" onclick="show('home')">← Back to Decks</button>
+  <h2 style="font-size:22px;font-weight:800;color:var(--text);margin-bottom:6px">Import Cards</h2>
+  <p style="font-size:14px;color:var(--text2);margin-bottom:20px">Paste text in any supported format — the parser will extract your cards automatically.</p>
+
+  <!-- Format hint -->
+  <div style="background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:16px;font-size:13px;color:var(--text2);line-height:1.7">
+    <strong style="color:var(--text)">Supported formats:</strong><br>
+    <code style="background:var(--border);padding:1px 4px;border-radius:4px">Q: What is 2+2?  A: 4</code> — Q:/A: prefix<br>
+    <code style="background:var(--border);padding:1px 4px;border-radius:4px">Question[blank line]Answer</code> — blank line pairs<br>
+    <code style="background:var(--border);padding:1px 4px;border-radius:4px">Question[tab]Answer</code> — tab separated
+  </div>
+
+  <!-- Text input -->
+  <div id="import-input-section">
+    <textarea id="import-text" rows="10" placeholder="Paste your cards here...&#10;&#10;Q: What is the capital of France?&#10;A: Paris&#10;&#10;Q: What is 2 + 2?&#10;A: 4"
+      style="width:100%;background:var(--surface);border:2px solid var(--border);border-radius:12px;padding:14px;font-size:14px;color:var(--text);outline:none;resize:vertical;font-family:inherit;line-height:1.6"
+      onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'"></textarea>
+    <button class="btn" onclick="parseImport()" style="width:100%;margin-top:10px;padding:14px;border-radius:12px;background:var(--primary);color:#fff;font-size:15px;font-weight:700">
+      Parse Cards →
+    </button>
+  </div>
+
+  <!-- Preview section (hidden until parsed) -->
+  <div id="import-preview" class="hidden">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin:20px 0 12px">
+      <h3 id="import-count" style="font-size:15px;font-weight:700;color:var(--text)"></h3>
+      <button class="btn" onclick="resetImport()" style="font-size:13px;color:var(--text2);background:none;border:none;text-decoration:underline;cursor:pointer">Start over</button>
+    </div>
+    <div id="import-cards-preview" style="display:flex;flex-direction:column;gap:8px;max-height:280px;overflow-y:auto;margin-bottom:16px"></div>
+
+    <!-- Deck name -->
+    <div style="margin-bottom:12px">
+      <label style="font-size:12px;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;color:var(--text2);display:block;margin-bottom:6px">Add to deck</label>
+      <input id="import-deck-name" placeholder="New deck name (or leave blank to use first deck)"
+        style="width:100%;background:var(--surface);border:2px solid var(--border);border-radius:10px;padding:11px 14px;font-size:14px;color:var(--text);outline:none;font-family:inherit"
+        onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'" />
+    </div>
+
+    <div style="display:flex;gap:10px">
+      <button class="btn" onclick="confirmImport()" style="flex:2;padding:14px;border-radius:12px;background:var(--primary);color:#fff;font-size:15px;font-weight:700">Add Cards to App</button>
+      <button class="btn" onclick="resetImport()" style="flex:1;padding:14px;border-radius:12px;background:var(--border);color:var(--text);font-size:14px;font-weight:600">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Success message -->
+  <div id="import-success" class="hidden" style="text-align:center;padding:32px 0">
+    <div style="font-size:48px;margin-bottom:12px">✅</div>
+    <p id="import-success-msg" style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:8px"></p>
+    <p style="font-size:14px;color:var(--text2);margin-bottom:20px">Your new deck is ready to study.</p>
+    <button class="btn" onclick="show('home')" style="padding:12px 28px;border-radius:12px;background:var(--primary);color:#fff;font-size:14px;font-weight:600">Back to Decks</button>
+  </div>
+</div>
+
 <script>
 var APP_DATA = {{APP_DATA_JSON}};
 
@@ -133,7 +193,7 @@ var correct      = 0;
 var isFlipped    = false;
 
 // ── Router ────────────────────────────────────────────────────────────────────
-var SCREENS = ["home","deck","study","complete"];
+var SCREENS = ["home","deck","study","complete","import"];
 function show(name) {
   SCREENS.forEach(function(s) {
     var el = document.getElementById("screen-" + s);
@@ -259,6 +319,122 @@ function showComplete() {
   document.getElementById("btn-study-again").onclick = startStudy;
   document.getElementById("btn-back-decks").onclick = function() { show("home"); };
   show("complete");
+}
+
+// ── Import ────────────────────────────────────────────────────────────────────
+var parsedImportCards = [];
+
+function parseImport() {
+  var text = document.getElementById("import-text").value.trim();
+  if (!text) return;
+
+  var cards = [];
+
+  // Format 1: Q:/A: prefix (case insensitive)
+  if (/Q\s*:/i.test(text) && /A\s*:/i.test(text)) {
+    var qaRegex = /Q\s*:\s*([\s\S]*?)(?=\s*A\s*:)\s*A\s*:\s*([\s\S]*?)(?=\s*Q\s*:|$)/gi;
+    var m;
+    while ((m = qaRegex.exec(text)) !== null) {
+      var front = m[1].trim();
+      var back  = m[2].trim();
+      if (front && back) cards.push({ front: front, back: back, hint: "" });
+    }
+  }
+
+  // Format 2: blank-line separated pairs
+  if (cards.length === 0) {
+    var blocks = text.split(/\n\s*\n/).map(function(b) { return b.trim(); }).filter(Boolean);
+    blocks.forEach(function(block) {
+      var lines = block.split("\n").map(function(l) { return l.trim(); }).filter(Boolean);
+      if (lines.length >= 2) {
+        cards.push({ front: lines[0], back: lines.slice(1).join(" "), hint: "" });
+      }
+    });
+  }
+
+  // Format 3: tab-separated per line
+  if (cards.length === 0) {
+    text.split("\n").forEach(function(line) {
+      var parts = line.split("\t");
+      if (parts.length >= 2 && parts[0].trim() && parts[1].trim()) {
+        cards.push({ front: parts[0].trim(), back: parts[1].trim(), hint: "" });
+      }
+    });
+  }
+
+  // Format 4: colon-separated per line (Term: Definition)
+  if (cards.length === 0) {
+    text.split("\n").forEach(function(line) {
+      var colonIdx = line.indexOf(":");
+      if (colonIdx > 0 && colonIdx < line.length - 1) {
+        cards.push({ front: line.slice(0, colonIdx).trim(), back: line.slice(colonIdx + 1).trim(), hint: "" });
+      }
+    });
+  }
+
+  if (cards.length === 0) {
+    alert("Could not parse any cards. Try Q:/A: format or separate question and answer with a blank line.");
+    return;
+  }
+
+  parsedImportCards = cards;
+  document.getElementById("import-input-section").classList.add("hidden");
+  document.getElementById("import-preview").classList.remove("hidden");
+  document.getElementById("import-count").textContent = cards.length + " card" + (cards.length !== 1 ? "s" : "") + " found";
+
+  var preview = document.getElementById("import-cards-preview");
+  preview.innerHTML = "";
+  cards.forEach(function(card, i) {
+    var row = document.createElement("div");
+    row.style.cssText = "background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;display:flex;align-items:flex-start;gap:12px";
+    row.innerHTML =
+      '<div style="width:24px;height:24px;border-radius:6px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--text2);flex-shrink:0">' + (i+1) + '</div>' +
+      '<div><div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px">' + card.front + '</div>' +
+      '<div style="font-size:12px;color:var(--text2)">' + card.back + '</div></div>';
+    preview.appendChild(row);
+  });
+}
+
+function confirmImport() {
+  if (!parsedImportCards.length) return;
+  var deckName = document.getElementById("import-deck-name").value.trim();
+  var newId = "imported-" + Date.now();
+
+  if (deckName) {
+    APP_DATA.decks.push({
+      id: newId, title: deckName,
+      description: parsedImportCards.length + " imported cards",
+      emoji: "📥", cards: parsedImportCards
+    });
+  } else if (APP_DATA.decks.length > 0) {
+    APP_DATA.decks[0].cards = APP_DATA.decks[0].cards.concat(parsedImportCards);
+  } else {
+    APP_DATA.decks.push({
+      id: newId, title: "Imported Cards",
+      description: parsedImportCards.length + " imported cards",
+      emoji: "📥", cards: parsedImportCards
+    });
+  }
+
+  // Rebuild home deck grid
+  document.getElementById("deck-grid").innerHTML = "";
+  buildHome();
+
+  var msg = deckName
+    ? '"' + deckName + '" created with ' + parsedImportCards.length + " cards"
+    : parsedImportCards.length + " cards added to " + APP_DATA.decks[0].title;
+  document.getElementById("import-success-msg").textContent = msg;
+  document.getElementById("import-preview").classList.add("hidden");
+  document.getElementById("import-success").classList.remove("hidden");
+  parsedImportCards = [];
+}
+
+function resetImport() {
+  parsedImportCards = [];
+  document.getElementById("import-text").value = "";
+  document.getElementById("import-input-section").classList.remove("hidden");
+  document.getElementById("import-preview").classList.add("hidden");
+  document.getElementById("import-success").classList.add("hidden");
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
