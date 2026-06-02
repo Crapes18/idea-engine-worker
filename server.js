@@ -3,6 +3,7 @@ import { generateGameData, generateReleaseNotes } from './lib/generate.js'
 import { generateQuizExplorerContent, generateLandingPageContent } from './lib/content-gen.js'
 import { applyTemplate, detectTemplate, TEMPLATE_IDS } from './lib/templates.js'
 import { validateHTML } from './lib/validate.js'
+import { patchAndValidate } from './lib/patcher.js'
 import { createRepo, pushFiles, repoUrl, readFile, updateFile, enableGitHubPages } from './lib/github.js'
 import { createProject, triggerAndWaitForDeploy } from './lib/vercel.js'
 import {
@@ -77,6 +78,7 @@ app.post('/build', auth, async (req, res) => {
     const { founderNotes, monetization, gameName, gameDescription } = req.body
     if (jobType === 'prototype') await buildPrototype(ideaId, { founderNotes, founderAvoid: req.body.founderAvoid, imageUrls: req.body.imageUrls, monetization })
     else if (jobType === 'revise_prototype') await revisePrototype(ideaId, { founderNotes, founderAvoid: req.body.founderAvoid, imageUrls: req.body.imageUrls, previousDeployUrl: req.body.previousDeployUrl })
+    else if (jobType === 'patch_prototype') await patchPrototype(ideaId, { spec: founderNotes, previousDeployUrl: req.body.previousDeployUrl })
     else if (jobType === 'add_game') await addGame(ideaId, gameName, gameDescription)
     else console.warn(`[worker] Unknown jobType: ${jobType}`)
   } catch (err) {
@@ -172,6 +174,62 @@ async function buildFromTemplate(ideaId, { founderNotes, founderAvoid, imageUrls
 
   await setStatus(ideaId, 'in_review', null)
   console.log(`[${label}] Done for "${idea.name}" — ${deployUrl}`)
+}
+
+async function patchPrototype(ideaId, { spec, previousDeployUrl } = {}) {
+  console.log(`[patch] Starting for idea ${ideaId}`)
+  if (!spec) throw new Error('No spec provided for patch_prototype job')
+
+  const idea = await getIdea(ideaId)
+  if (!idea) throw new Error('Idea not found')
+
+  await setStatus(ideaId, 'building')
+  console.log(`[patch] Spec: ${spec.slice(0, 100)}`)
+
+  // Read current file from GitHub
+  console.log(`[patch] Reading current index.html from ${idea.slug}...`)
+  const { content: currentHtml, sha } = await readFile(idea.slug, 'index.html')
+  console.log(`[patch] Read ${currentHtml.length} chars`)
+
+  // Generate and apply patches
+  const { html: patchedHtml, changed } = await patchAndValidate(currentHtml, spec)
+
+  if (!changed) {
+    console.log('[patch] No changes needed — spec already implemented')
+    const deployUrl = previousDeployUrl || `https://${(process.env.GITHUB_USERNAME || 'crapes18').toLowerCase()}.github.io/${idea.slug}`
+    await createApproval({
+      ideaId,
+      stage: 'prototype',
+      type: 'prototype',
+      summary: `"${idea.name}" — the requested changes are already implemented in the current prototype.`,
+      payload: { deployUrl, githubUrl: repoUrl(idea.slug), alreadyImplemented: true },
+    })
+    await setStatus(ideaId, 'in_review', null)
+    return
+  }
+
+  // Push patched file
+  console.log('[patch] Pushing patched file to GitHub...')
+  const commitMsg = `fix: ${spec.slice(0, 60).replace(/\n/g, ' ')}`
+  await import('./lib/github.js').then(gh =>
+    gh.updateFile(idea.slug, 'index.html', patchedHtml, sha, commitMsg)
+  )
+  console.log('[patch] Pushed')
+
+  // Wait for GitHub Pages
+  const deployUrl = await enableGitHubPages(idea.slug)
+  console.log(`[patch] Live at: ${deployUrl}`)
+
+  await createApproval({
+    ideaId,
+    stage: 'prototype',
+    type: 'prototype',
+    summary: `"${idea.name}" prototype updated. Review the changes and approve to advance, or request further changes.`,
+    payload: { deployUrl, githubUrl: repoUrl(idea.slug), isPatch: true },
+  })
+
+  await setStatus(ideaId, 'in_review', null)
+  console.log(`[patch] Done for "${idea.name}"`)
 }
 
 async function buildPrototype(ideaId, opts = {}) {
