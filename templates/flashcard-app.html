@@ -123,69 +123,87 @@ body{font-family:"Geist",sans-serif;background:var(--bg);color:var(--text);min-h
   </div>
 </div>
 
-<!-- IMPORT SCREEN -->
+<!-- ADD CARDS SCREEN -->
 <div id="screen-import" class="hidden" style="padding:24px;max-width:580px;margin:0 auto">
   <button class="back-btn" onclick="show('home')">← Back to Decks</button>
-  <h2 style="font-size:22px;font-weight:800;color:var(--text);margin-bottom:6px">Import Cards</h2>
-  <p style="font-size:14px;color:var(--text2);margin-bottom:20px">Paste text in any supported format — the parser will extract your cards automatically.</p>
+  <h2 style="font-size:22px;font-weight:800;color:var(--text);margin-bottom:20px">Add Cards</h2>
 
-  <!-- Format hint -->
-  <div style="background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:16px;font-size:13px;color:var(--text2);line-height:1.7">
-    <strong style="color:var(--text)">Supported formats:</strong><br>
-    <code style="background:var(--border);padding:1px 4px;border-radius:4px">Q: What is 2+2?  A: 4</code> — Q:/A: prefix<br>
-    <code style="background:var(--border);padding:1px 4px;border-radius:4px">Question[blank line]Answer</code> — blank line pairs<br>
-    <code style="background:var(--border);padding:1px 4px;border-radius:4px">Question[tab]Answer</code> — tab separated
+  <!-- Mode tabs -->
+  <div style="display:flex;background:var(--bg);border-radius:12px;padding:4px;margin-bottom:24px;gap:4px">
+    <button class="btn import-tab active-tab" id="tab-build" onclick="switchImportTab('build')" style="flex:1;padding:10px;border-radius:9px;font-size:13px;font-weight:600;background:var(--surface);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,0.08)">✏️ Build</button>
+    <button class="btn import-tab" id="tab-pdf" onclick="switchImportTab('pdf')" style="flex:1;padding:10px;border-radius:9px;font-size:13px;font-weight:600;background:transparent;color:var(--text2)">📄 PDF</button>
+    <button class="btn import-tab" id="tab-photo" onclick="switchImportTab('photo')" style="flex:1;padding:10px;border-radius:9px;font-size:13px;font-weight:600;background:transparent;color:var(--text2)">📷 Photo</button>
   </div>
 
-  <!-- Text input -->
-  <div id="import-input-section">
+  <!-- BUILD MODE -->
+  <div id="import-build">
+    <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px">
+      <div>
+        <label style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text2);display:block;margin-bottom:6px">Question</label>
+        <textarea id="build-question" rows="3" placeholder="Type your question here..."
+          style="width:100%;background:var(--surface);border:2px solid var(--border);border-radius:12px;padding:12px 14px;font-size:15px;color:var(--text);outline:none;resize:vertical;font-family:inherit;line-height:1.5"
+          onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'"></textarea>
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text2);display:block;margin-bottom:6px">Answer</label>
+        <textarea id="build-answer" rows="3" placeholder="Type the answer here..."
+          style="width:100%;background:var(--surface);border:2px solid var(--border);border-radius:12px;padding:12px 14px;font-size:15px;color:var(--text);outline:none;resize:vertical;font-family:inherit;line-height:1.5"
+          onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'"></textarea>
+      </div>
+      <button class="btn" onclick="addBuiltCard()" style="padding:13px;border-radius:12px;background:var(--primary);color:#fff;font-size:14px;font-weight:700">+ Add Card</button>
+    </div>
 
-    <!-- File upload -->
-    <label style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:20px;background:var(--bg);border:2px dashed var(--border);border-radius:12px;cursor:pointer;margin-bottom:12px;font-size:14px;font-weight:600;color:var(--text2);transition:border-color 0.15s"
+    <div id="built-cards-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px"></div>
+
+    <div id="build-save-section" class="hidden" style="border-top:1px solid var(--border);padding-top:16px">
+      <input id="build-deck-name" placeholder="Deck name"
+        style="width:100%;background:var(--surface);border:2px solid var(--border);border-radius:10px;padding:11px 14px;font-size:14px;color:var(--text);outline:none;font-family:inherit;margin-bottom:10px"
+        onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'" />
+      <button class="btn" onclick="saveBuiltDeck()" style="width:100%;padding:14px;border-radius:12px;background:var(--primary);color:#fff;font-size:15px;font-weight:700">Save Deck</button>
+    </div>
+  </div>
+
+  <!-- PDF MODE -->
+  <div id="import-pdf" class="hidden">
+    <label style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;width:100%;padding:40px 24px;background:var(--bg);border:2px dashed var(--border);border-radius:16px;cursor:pointer;text-align:center;transition:border-color 0.15s"
       onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border)'">
-      <span style="font-size:24px">📁</span>
-      Upload a file (.txt, .csv)
-      <input type="file" accept=".txt,.csv,.tsv" style="display:none" onchange="handleFileUpload(this)">
+      <span style="font-size:48px">📄</span>
+      <span style="font-size:16px;font-weight:700;color:var(--text)">Upload a PDF</span>
+      <span style="font-size:13px;color:var(--text2)">We will extract the text and parse it into flashcards</span>
+      <input type="file" accept=".pdf" style="display:none" onchange="handlePdfUpload(this)">
+    </label>
+    <p style="font-size:12px;color:var(--text3);text-align:center;margin-top:12px">Best results with text-based PDFs. Scanned documents may not extract well.</p>
+    <div id="pdf-status" style="margin-top:16px"></div>
+  </div>
+
+  <!-- PHOTO MODE -->
+  <div id="import-photo" class="hidden">
+    <label style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;width:100%;padding:40px 24px;background:var(--bg);border:2px dashed var(--border);border-radius:16px;cursor:pointer;text-align:center;transition:border-color 0.15s"
+      onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border)'">
+      <span style="font-size:48px">📷</span>
+      <span style="font-size:16px;font-weight:700;color:var(--text)">Upload a Photo</span>
+      <span style="font-size:13px;color:var(--text2)">Use a photo as the answer side of a card</span>
+      <input type="file" accept="image/*" capture="environment" style="display:none" onchange="handlePhotoUpload(this)">
     </label>
 
-    <div style="text-align:center;font-size:12px;color:var(--text3);margin-bottom:12px">— or paste text below —</div>
-
-    <textarea id="import-text" rows="8" placeholder="Paste your cards here...&#10;&#10;Q: What is the capital of France?&#10;A: Paris&#10;&#10;Q: What is 2 + 2?&#10;A: 4"
-      style="width:100%;background:var(--surface);border:2px solid var(--border);border-radius:12px;padding:14px;font-size:14px;color:var(--text);outline:none;resize:vertical;font-family:inherit;line-height:1.6"
-      onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'"></textarea>
-    <button class="btn" onclick="parseImport()" style="width:100%;margin-top:10px;padding:14px;border-radius:12px;background:var(--primary);color:#fff;font-size:15px;font-weight:700">
-      Parse Cards →
-    </button>
-  </div>
-
-  <!-- Preview section (hidden until parsed) -->
-  <div id="import-preview" class="hidden">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin:20px 0 12px">
-      <h3 id="import-count" style="font-size:15px;font-weight:700;color:var(--text)"></h3>
-      <button class="btn" onclick="resetImport()" style="font-size:13px;color:var(--text2);background:none;border:none;text-decoration:underline;cursor:pointer">Start over</button>
-    </div>
-    <div id="import-cards-preview" style="display:flex;flex-direction:column;gap:8px;max-height:280px;overflow-y:auto;margin-bottom:16px"></div>
-
-    <!-- Deck name -->
-    <div style="margin-bottom:12px">
-      <label style="font-size:12px;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;color:var(--text2);display:block;margin-bottom:6px">Add to deck</label>
-      <input id="import-deck-name" placeholder="New deck name (or leave blank to use first deck)"
-        style="width:100%;background:var(--surface);border:2px solid var(--border);border-radius:10px;padding:11px 14px;font-size:14px;color:var(--text);outline:none;font-family:inherit"
+    <div id="photo-preview" class="hidden" style="margin-top:16px">
+      <img id="photo-img" style="width:100%;border-radius:12px;margin-bottom:12px;max-height:200px;object-fit:cover">
+      <label style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text2);display:block;margin-bottom:6px">Question for this photo</label>
+      <input id="photo-question" placeholder="What does this show?"
+        style="width:100%;background:var(--surface);border:2px solid var(--border);border-radius:10px;padding:11px 14px;font-size:14px;color:var(--text);outline:none;font-family:inherit;margin-bottom:10px"
         onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'" />
-    </div>
-
-    <div style="display:flex;gap:10px">
-      <button class="btn" onclick="confirmImport()" style="flex:2;padding:14px;border-radius:12px;background:var(--primary);color:#fff;font-size:15px;font-weight:700">Add Cards to App</button>
-      <button class="btn" onclick="resetImport()" style="flex:1;padding:14px;border-radius:12px;background:var(--border);color:var(--text);font-size:14px;font-weight:600">Cancel</button>
+      <input id="photo-deck-name" placeholder="Deck name"
+        style="width:100%;background:var(--surface);border:2px solid var(--border);border-radius:10px;padding:11px 14px;font-size:14px;color:var(--text);outline:none;font-family:inherit;margin-bottom:10px"
+        onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'" />
+      <button class="btn" onclick="savePhotoCard()" style="width:100%;padding:14px;border-radius:12px;background:var(--primary);color:#fff;font-size:15px;font-weight:700">Add Photo Card</button>
     </div>
   </div>
 
-  <!-- Success message -->
+  <!-- Shared success -->
   <div id="import-success" class="hidden" style="text-align:center;padding:32px 0">
     <div style="font-size:48px;margin-bottom:12px">✅</div>
     <p id="import-success-msg" style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:8px"></p>
-    <p style="font-size:14px;color:var(--text2);margin-bottom:20px">Your new deck is ready to study.</p>
-    <button class="btn" onclick="show('home')" style="padding:12px 28px;border-radius:12px;background:var(--primary);color:#fff;font-size:14px;font-weight:600">Back to Decks</button>
+    <button class="btn" onclick="show('home');resetImport()" style="padding:12px 28px;border-radius:12px;background:var(--primary);color:#fff;font-size:14px;font-weight:600">Back to Decks</button>
   </div>
 </div>
 
@@ -332,130 +350,193 @@ function showComplete() {
   show("complete");
 }
 
-// ── Import ────────────────────────────────────────────────────────────────────
-var parsedImportCards = [];
+// ── Add Cards ────────────────────────────────────────────────────────────────
+var builtCards = [];
+var photoDataUrl = null;
 
-function handleFileUpload(input) {
-  var file = input.files[0];
-  if (!file) return;
-  var reader = new FileReader();
-  reader.onload = function(e) {
-    document.getElementById("import-text").value = e.target.result;
-  };
-  reader.readAsText(file);
+function switchImportTab(tab) {
+  ["build","pdf","photo"].forEach(function(t) {
+    document.getElementById("import-" + t).classList.toggle("hidden", t !== tab);
+    var btn = document.getElementById("tab-" + t);
+    if (t === tab) {
+      btn.style.background = "var(--surface)";
+      btn.style.color = "var(--text)";
+      btn.style.boxShadow = "0 1px 4px rgba(0,0,0,0.08)";
+    } else {
+      btn.style.background = "transparent";
+      btn.style.color = "var(--text2)";
+      btn.style.boxShadow = "none";
+    }
+  });
 }
 
-function parseImport() {
-  var text = document.getElementById("import-text").value.trim();
-  if (!text) return;
+// ── Build tab ─────────────────────────────────────────────────────────────────
+function addBuiltCard() {
+  var q = document.getElementById("build-question").value.trim();
+  var a = document.getElementById("build-answer").value.trim();
+  if (!q || !a) { alert("Please enter both a question and an answer."); return; }
+  builtCards.push({ front: q, back: a, hint: "" });
+  document.getElementById("build-question").value = "";
+  document.getElementById("build-answer").value = "";
+  document.getElementById("build-question").focus();
+  renderBuiltCards();
+  document.getElementById("build-save-section").classList.remove("hidden");
+}
 
-  var cards = [];
-
-  // Format 1: Q:/A: prefix (case insensitive)
-  if (/Q\s*:/i.test(text) && /A\s*:/i.test(text)) {
-    var qaRegex = /Q\s*:\s*([\s\S]*?)(?=\s*A\s*:)\s*A\s*:\s*([\s\S]*?)(?=\s*Q\s*:|$)/gi;
-    var m;
-    while ((m = qaRegex.exec(text)) !== null) {
-      var front = m[1].trim();
-      var back  = m[2].trim();
-      if (front && back) cards.push({ front: front, back: back, hint: "" });
-    }
-  }
-
-  // Format 2: blank-line separated pairs
-  if (cards.length === 0) {
-    var blocks = text.split(/\n\s*\n/).map(function(b) { return b.trim(); }).filter(Boolean);
-    blocks.forEach(function(block) {
-      var lines = block.split("\n").map(function(l) { return l.trim(); }).filter(Boolean);
-      if (lines.length >= 2) {
-        cards.push({ front: lines[0], back: lines.slice(1).join(" "), hint: "" });
-      }
-    });
-  }
-
-  // Format 3: tab-separated per line
-  if (cards.length === 0) {
-    text.split("\n").forEach(function(line) {
-      var parts = line.split("\t");
-      if (parts.length >= 2 && parts[0].trim() && parts[1].trim()) {
-        cards.push({ front: parts[0].trim(), back: parts[1].trim(), hint: "" });
-      }
-    });
-  }
-
-  // Format 4: colon-separated per line (Term: Definition)
-  if (cards.length === 0) {
-    text.split("\n").forEach(function(line) {
-      var colonIdx = line.indexOf(":");
-      if (colonIdx > 0 && colonIdx < line.length - 1) {
-        cards.push({ front: line.slice(0, colonIdx).trim(), back: line.slice(colonIdx + 1).trim(), hint: "" });
-      }
-    });
-  }
-
-  if (cards.length === 0) {
-    alert("Could not parse any cards. Try Q:/A: format or separate question and answer with a blank line.");
-    return;
-  }
-
-  parsedImportCards = cards;
-  document.getElementById("import-input-section").classList.add("hidden");
-  document.getElementById("import-preview").classList.remove("hidden");
-  document.getElementById("import-count").textContent = cards.length + " card" + (cards.length !== 1 ? "s" : "") + " found";
-
-  var preview = document.getElementById("import-cards-preview");
-  preview.innerHTML = "";
-  cards.forEach(function(card, i) {
+function renderBuiltCards() {
+  var list = document.getElementById("built-cards-list");
+  list.innerHTML = "";
+  builtCards.forEach(function(card, i) {
     var row = document.createElement("div");
     row.style.cssText = "background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;display:flex;align-items:flex-start;gap:12px";
     row.innerHTML =
       '<div style="width:24px;height:24px;border-radius:6px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--text2);flex-shrink:0">' + (i+1) + '</div>' +
-      '<div><div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px">' + card.front + '</div>' +
-      '<div style="font-size:12px;color:var(--text2)">' + card.back + '</div></div>';
-    preview.appendChild(row);
+      '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px">' + card.front + '</div>' +
+      '<div style="font-size:12px;color:var(--text2)">' + card.back + '</div></div>' +
+      '<button onclick="removeBuiltCard(' + i + ')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:0;flex-shrink:0">×</button>';
+    list.appendChild(row);
   });
 }
 
-function confirmImport() {
-  if (!parsedImportCards.length) return;
-  var deckName = document.getElementById("import-deck-name").value.trim();
-  var newId = "imported-" + Date.now();
+function removeBuiltCard(i) {
+  builtCards.splice(i, 1);
+  renderBuiltCards();
+  if (!builtCards.length) document.getElementById("build-save-section").classList.add("hidden");
+}
 
-  if (deckName) {
-    APP_DATA.decks.push({
-      id: newId, title: deckName,
-      description: parsedImportCards.length + " imported cards",
-      emoji: "📥", cards: parsedImportCards
+function saveBuiltDeck() {
+  if (!builtCards.length) return;
+  var name = document.getElementById("build-deck-name").value.trim() || "My Cards";
+  APP_DATA.decks.push({ id: "built-" + Date.now(), title: name, description: builtCards.length + " cards", emoji: "✏️", cards: builtCards.slice() });
+  document.getElementById("deck-grid").innerHTML = ""; buildHome();
+  document.getElementById("import-success-msg").textContent = '"' + name + '" saved with ' + builtCards.length + " cards";
+  document.getElementById("import-build").classList.add("hidden");
+  document.getElementById("import-success").classList.remove("hidden");
+  builtCards = [];
+}
+
+// ── PDF tab ───────────────────────────────────────────────────────────────────
+function handlePdfUpload(input) {
+  var file = input.files[0];
+  if (!file) return;
+  var status = document.getElementById("pdf-status");
+  status.innerHTML = '<p style="color:var(--text2);font-size:14px;text-align:center">Reading PDF...</p>';
+
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var typedArray = new Uint8Array(e.target.result);
+    if (typeof pdfjsLib === "undefined") {
+      // Load PDF.js on demand
+      var script = document.createElement("script");
+      script.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+      script.onload = function() {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+        extractPdfText(typedArray, status);
+      };
+      document.head.appendChild(script);
+    } else {
+      extractPdfText(typedArray, status);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function extractPdfText(typedArray, status) {
+  pdfjsLib.getDocument(typedArray).promise.then(function(pdf) {
+    status.innerHTML = '<p style="color:var(--text2);font-size:14px;text-align:center">Extracting text from ' + pdf.numPages + ' pages...</p>';
+    var pages = [];
+    for (var i = 1; i <= pdf.numPages; i++) pages.push(i);
+    var allText = "";
+    var done = 0;
+    pages.forEach(function(pageNum) {
+      pdf.getPage(pageNum).then(function(page) {
+        page.getTextContent().then(function(tc) {
+          allText += tc.items.map(function(s) { return s.str; }).join(" ") + "\n\n";
+          done++;
+          if (done === pages.length) processPdfText(allText, status);
+        });
+      });
     });
-  } else if (APP_DATA.decks.length > 0) {
-    APP_DATA.decks[0].cards = APP_DATA.decks[0].cards.concat(parsedImportCards);
-  } else {
-    APP_DATA.decks.push({
-      id: newId, title: "Imported Cards",
-      description: parsedImportCards.length + " imported cards",
-      emoji: "📥", cards: parsedImportCards
+  }).catch(function() {
+    status.innerHTML = '<p style="color:#DC2626;font-size:14px;text-align:center">Could not read this PDF. Try a text-based PDF.</p>';
+  });
+}
+
+function processPdfText(text, status) {
+  var cards = parsePdfText(text);
+  if (!cards.length) {
+    status.innerHTML = '<p style="color:#DC2626;font-size:14px;text-align:center">No Q&A pairs found. The PDF may not contain question/answer formatted content.</p>';
+    return;
+  }
+  var deckName = "PDF Import";
+  APP_DATA.decks.push({ id: "pdf-" + Date.now(), title: deckName, description: cards.length + " cards from PDF", emoji: "📄", cards: cards });
+  document.getElementById("deck-grid").innerHTML = ""; buildHome();
+  document.getElementById("import-success-msg").textContent = cards.length + " cards imported from PDF";
+  document.getElementById("import-pdf").classList.add("hidden");
+  document.getElementById("import-success").classList.remove("hidden");
+}
+
+function parsePdfText(text) {
+  var cards = [];
+  var qaRegex = /Q\s*:\s*([\s\S]*?)A\s*:\s*([\s\S]*?)(?=Q\s*:|$)/gi;
+  var m;
+  while ((m = qaRegex.exec(text)) !== null) {
+    var f = m[1].trim().replace(/\s+/g, " ");
+    var b = m[2].trim().replace(/\s+/g, " ");
+    if (f && b && f.length < 300 && b.length < 300) cards.push({ front: f, back: b, hint: "" });
+  }
+  if (!cards.length) {
+    text.split(/\n\s*\n/).forEach(function(block) {
+      var lines = block.trim().split("\n").filter(function(l) { return l.trim(); });
+      if (lines.length === 2) cards.push({ front: lines[0].trim(), back: lines[1].trim(), hint: "" });
     });
   }
+  return cards;
+}
 
-  // Rebuild home deck grid
-  document.getElementById("deck-grid").innerHTML = "";
-  buildHome();
+// ── Photo tab ─────────────────────────────────────────────────────────────────
+function handlePhotoUpload(input) {
+  var file = input.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    photoDataUrl = e.target.result;
+    document.getElementById("photo-img").src = photoDataUrl;
+    document.getElementById("photo-preview").classList.remove("hidden");
+  };
+  reader.readAsDataURL(file);
+}
 
-  var msg = deckName
-    ? '"' + deckName + '" created with ' + parsedImportCards.length + " cards"
-    : parsedImportCards.length + " cards added to " + APP_DATA.decks[0].title;
-  document.getElementById("import-success-msg").textContent = msg;
-  document.getElementById("import-preview").classList.add("hidden");
+function savePhotoCard() {
+  if (!photoDataUrl) return;
+  var q = document.getElementById("photo-question").value.trim() || "What is shown in this image?";
+  var deckName = document.getElementById("photo-deck-name").value.trim() || "Photo Cards";
+  var existing = APP_DATA.decks.find(function(d) { return d.title === deckName; });
+  var card = { front: q, back: '<img src="' + photoDataUrl + '" style="max-width:100%;border-radius:8px">', hint: "", isImage: true };
+  if (existing) {
+    existing.cards.push(card);
+  } else {
+    APP_DATA.decks.push({ id: "photo-" + Date.now(), title: deckName, description: "Photo cards", emoji: "📷", cards: [card] });
+  }
+  document.getElementById("deck-grid").innerHTML = ""; buildHome();
+  document.getElementById("import-success-msg").textContent = "Photo card added to \"" + deckName + "\"";
+  document.getElementById("photo-preview").classList.add("hidden");
   document.getElementById("import-success").classList.remove("hidden");
-  parsedImportCards = [];
+  photoDataUrl = null;
 }
 
 function resetImport() {
-  parsedImportCards = [];
-  document.getElementById("import-text").value = "";
-  document.getElementById("import-input-section").classList.remove("hidden");
-  document.getElementById("import-preview").classList.add("hidden");
+  builtCards = []; photoDataUrl = null;
+  document.getElementById("built-cards-list").innerHTML = "";
+  document.getElementById("build-question").value = "";
+  document.getElementById("build-answer").value = "";
+  document.getElementById("build-save-section").classList.add("hidden");
   document.getElementById("import-success").classList.add("hidden");
+  document.getElementById("import-build").classList.remove("hidden");
+  document.getElementById("import-pdf").classList.add("hidden");
+  document.getElementById("import-photo").classList.add("hidden");
+  document.getElementById("photo-preview").classList.add("hidden");
+  switchImportTab("build");
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
