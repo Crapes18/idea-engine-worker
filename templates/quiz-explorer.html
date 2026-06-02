@@ -162,20 +162,48 @@ function showDetail(jobId) {
   var cat = APP_DATA.categories.find(function(c) { return c.id === job.cat; });
   if (!cat) return;
 
+  var richSections = "";
+
+  // Typical day section
+  if (job.typicalDay) {
+    richSections += '<div style="background:#F8F8F6;border-radius:14px;padding:16px 18px;margin-bottom:12px">' +
+      '<div style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#A0A0A0;margin-bottom:8px">A Typical Day</div>' +
+      '<p style="font-size:14px;color:#1A1A1A;line-height:1.6">' + job.typicalDay + '</p></div>';
+  }
+
+  // Skills section
+  if (job.skills && job.skills.length) {
+    richSections += '<div style="background:#F8F8F6;border-radius:14px;padding:16px 18px;margin-bottom:12px">' +
+      '<div style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#A0A0A0;margin-bottom:10px">Skills You Need</div>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:8px">' +
+      job.skills.map(function(s) {
+        return '<span style="background:' + cat.bg + ';color:' + cat.color + ';border-radius:99px;padding:5px 12px;font-size:13px;font-weight:600">' + s + '</span>';
+      }).join("") + '</div></div>';
+  }
+
+  // Fun fact section
+  if (job.funFact) {
+    richSections += '<div style="background:#FFD93D22;border:1px solid #FFD93D55;border-radius:14px;padding:16px 18px;margin-bottom:12px;display:flex;gap:12px;align-items:flex-start">' +
+      '<span style="font-size:24px;flex-shrink:0">💡</span>' +
+      '<div><div style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#886600;margin-bottom:6px">Fun Fact</div>' +
+      '<p style="font-size:14px;color:#1A1A1A;line-height:1.6">' + job.funFact + '</p></div></div>';
+  }
+
   document.getElementById("detail-content").innerHTML =
-    '<div style="background:' + cat.bg + ';border-radius:20px;padding:24px;text-align:center;margin-bottom:20px">' +
+    '<div style="background:' + cat.bg + ';border-radius:20px;padding:24px;text-align:center;margin-bottom:16px">' +
     '<div style="font-size:64px;margin-bottom:12px">' + job.emoji + '</div>' +
     (job.future ? '<div style="background:#FFD93D;color:#664400;display:inline-block;padding:4px 14px;border-radius:99px;font-size:12px;font-weight:700;margin-bottom:10px">FUTURE JOB - Growing Fast!</div>' : "") +
     '<h2 style="font-size:24px;font-weight:900;color:' + cat.color + ';margin-bottom:8px">' + job.name + '</h2>' +
     '<p style="font-size:15px;color:' + cat.color + ';opacity:0.85;line-height:1.6">' + job.detail + '</p></div>' +
-    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px">' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">' +
     '<div style="background:#F8F8F6;border-radius:12px;padding:14px;text-align:center">' +
     '<div style="font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#A0A0A0;margin-bottom:4px">Category</div>' +
     '<div style="font-size:15px;font-weight:700">' + cat.emoji + " " + cat.name + '</div></div>' +
     '<div style="background:#F8F8F6;border-radius:12px;padding:14px;text-align:center">' +
     '<div style="font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#A0A0A0;margin-bottom:4px">Avg Salary</div>' +
     '<div style="font-size:15px;font-weight:700">' + (job.wage || "Varies") + '</div></div></div>' +
-    '<button class="btn" id="detail-explore-more" style="width:100%;background:#1A1A1A;color:#fff;border-radius:14px;padding:14px;font-size:15px;font-weight:700">Explore More Jobs</button>';
+    richSections +
+    '<button class="btn" id="detail-explore-more" style="width:100%;background:#1A1A1A;color:#fff;border-radius:14px;padding:14px;font-size:15px;font-weight:700;margin-top:4px">Explore More Jobs</button>';
 
   document.getElementById("detail-explore-more").addEventListener("click", function() { show("categories"); });
   show("detail");
