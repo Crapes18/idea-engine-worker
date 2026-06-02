@@ -145,8 +145,7 @@ async function buildFromTemplate(ideaId, { founderNotes, founderAvoid, imageUrls
   // 5. Create/update GitHub repo
   await log(ideaId, label, idea.name, 'github_push', `Pushing to GitHub repo: ${idea.slug}`)
   await createRepo(idea.slug, idea.one_liner || idea.name)
-  await pushFiles(idea.slug, files)
-  const githubUrl = repoUrl(idea.slug)
+  const { repoUrl: githubUrl, commitSha, commitUrl } = await pushFiles(idea.slug, files)
   await log(ideaId, label, idea.name, 'github_pushed', `Pushed to ${githubUrl}`)
 
   // 6. Enable GitHub Pages
@@ -154,7 +153,11 @@ async function buildFromTemplate(ideaId, { founderNotes, founderAvoid, imageUrls
   const deployUrl = await enableGitHubPages(idea.slug)
   await log(ideaId, label, idea.name, 'pages_live', `Live at: ${deployUrl}`)
 
-  // 7. Create approval
+  // 7. Create approval — include commit info so dashboard can show what changed
+  const changesSummary = founderNotes
+    ? founderNotes.slice(0, 400)
+    : (isRevision ? 'Prototype revised.' : 'First prototype built.')
+
   const summary = isRevision
     ? `"${idea.name}" revised prototype is live. Review and approve to advance, or request further changes.`
     : `"${idea.name}" prototype is live and ready for review.`
@@ -164,7 +167,7 @@ async function buildFromTemplate(ideaId, { founderNotes, founderAvoid, imageUrls
     stage: 'prototype',
     type: 'prototype',
     summary,
-    payload: { deployUrl, githubUrl, templateId, isRevision },
+    payload: { deployUrl, githubUrl, commitSha, commitUrl, templateId, isRevision, changesSummary },
   })
 
   await setStatus(ideaId, 'in_review', null)
@@ -206,9 +209,13 @@ async function patchPrototype(ideaId, { spec, previousDeployUrl } = {}) {
   // Push patched file
   console.log('[patch] Pushing patched file to GitHub...')
   const commitMsg = `fix: ${spec.slice(0, 60).replace(/\n/g, ' ')}`
-  await import('./lib/github.js').then(gh =>
+  const { data: patchCommit } = await import('./lib/github.js').then(gh =>
     gh.updateFile(idea.slug, 'index.html', patchedHtml, sha, commitMsg)
   )
+  const patchCommitSha = patchCommit?.commit?.sha
+  const patchCommitUrl = patchCommitSha
+    ? `https://github.com/${process.env.GITHUB_USERNAME || 'Crapes18'}/${idea.slug}/commit/${patchCommitSha}`
+    : null
   console.log('[patch] Pushed')
 
   // Wait for GitHub Pages
@@ -220,7 +227,7 @@ async function patchPrototype(ideaId, { spec, previousDeployUrl } = {}) {
     stage: 'prototype',
     type: 'prototype',
     summary: `"${idea.name}" prototype updated. Review the changes and approve to advance, or request further changes.`,
-    payload: { deployUrl, githubUrl: repoUrl(idea.slug), isPatch: true },
+    payload: { deployUrl, githubUrl: repoUrl(idea.slug), commitUrl: patchCommitUrl, commitSha: patchCommitSha, isPatch: true, changesSummary: spec.slice(0, 400) },
   })
 
   await setStatus(ideaId, 'in_review', null)
