@@ -251,12 +251,21 @@ function showResult() {
   var rjobs = document.getElementById("result-jobs");
   rjobs.innerHTML = "";
   topJobs.forEach(function(job) {
-    var div = document.createElement("div");
-    div.style.cssText = "background:#fff;border:1px solid #E8E8E4;border-radius:14px;padding:14px;display:flex;align-items:center;gap:12px;margin-bottom:10px";
-    div.innerHTML = '<span style="font-size:28px">' + job.emoji + '</span>' +
-      '<div><div style="font-size:15px;font-weight:700;color:#1A1A1A">' + job.name + '</div>' +
-      '<div style="font-size:12px;color:#888;margin-top:2px">' + job.short + '</div></div>';
-    rjobs.appendChild(div);
+    var btn = document.createElement("button");
+    btn.className = "btn";
+    btn.style.cssText = "background:#fff;border:1px solid #E8E8E4;border-radius:14px;padding:14px;display:flex;align-items:center;gap:12px;margin-bottom:10px;width:100%;text-align:left;cursor:pointer;transition:border-color 0.1s";
+    btn.innerHTML = '<span style="font-size:28px;flex-shrink:0">' + job.emoji + '</span>' +
+      '<div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:700;color:#1A1A1A">' + job.name + '</div>' +
+      '<div style="font-size:12px;color:#888;margin-top:2px">' + job.short + '</div></div>' +
+      '<span style="font-size:12px;color:#A0A0A0;flex-shrink:0">→</span>';
+    btn.setAttribute("data-jobid", job.id);
+    btn.addEventListener("mouseenter", function() { this.style.borderColor = "#1A1A1A"; });
+    btn.addEventListener("mouseleave", function() { this.style.borderColor = "#E8E8E4"; });
+    btn.addEventListener("click", function() {
+      document.getElementById("detail-back").onclick = function() { show("result"); };
+      showDetail(this.getAttribute("data-jobid"));
+    });
+    rjobs.appendChild(btn);
   });
 
   document.getElementById("btn-retry").textContent = APP_DATA.result_screen.retry_button || "Try Again";
