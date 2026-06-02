@@ -1,6 +1,6 @@
 import express from 'express'
 import { generateGameData, generateReleaseNotes } from './lib/generate.js'
-import { generateQuizExplorerContent } from './lib/content-gen.js'
+import { generateQuizExplorerContent, generateLandingPageContent } from './lib/content-gen.js'
 import { applyTemplate, detectTemplate, TEMPLATE_IDS } from './lib/templates.js'
 import { validateHTML } from './lib/validate.js'
 import { createRepo, pushFiles, repoUrl, readFile, updateFile, enableGitHubPages } from './lib/github.js'
@@ -113,18 +113,18 @@ async function buildFromTemplate(ideaId, { founderNotes, founderAvoid, imageUrls
 
   await setStatus(ideaId, 'building')
 
-  // 1. Detect which template to use
-  const templateId = detectTemplate(brief, founderNotes)
+  // 1. Detect which template to use based on idea type
+  const templateId = detectTemplate(brief, founderNotes, idea.name)
   console.log(`[${label}] Using template: ${templateId}`)
   if (founderNotes) console.log(`[${label}] Founder notes: ${founderNotes.slice(0, 100)}`)
 
-  // 2. Generate content JSON (short, reliable — no HTML syntax risk)
+  // 2. Generate content JSON for the chosen template (short, reliable — no HTML syntax risk)
   console.log(`[${label}] Generating content JSON...`)
   let appData
   if (templateId === TEMPLATE_IDS.QUIZ_EXPLORER) {
     appData = await generateQuizExplorerContent({ name: idea.name, brief, founderNotes, founderAvoid, imageUrls })
   } else {
-    appData = await generateQuizExplorerContent({ name: idea.name, brief, founderNotes, founderAvoid, imageUrls })
+    appData = await generateLandingPageContent({ name: idea.name, brief, founderNotes, founderAvoid })
   }
   console.log(`[${label}] Content generated: ${appData.careers?.length || 0} careers, ${appData.categories?.length || 0} categories`)
 

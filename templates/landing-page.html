@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{APP_TITLE}}</title>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Geist",sans-serif;background:#FFFFFF;color:#1A1A1A;min-height:100vh}
+.hidden{display:none!important}
+.btn{border:none;cursor:pointer;font-family:inherit;transition:transform 0.1s,opacity 0.1s}
+.btn:active{transform:scale(0.97)}
+.btn:hover{opacity:0.9}
+section{padding:64px 24px;max-width:1100px;margin:0 auto}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav id="app-nav" style="position:sticky;top:0;background:rgba(255,255,255,0.92);backdrop-filter:blur(12px);border-bottom:1px solid #E8E8E4;padding:0 24px;height:60px;display:flex;align-items:center;justify-content:space-between;z-index:50">
+  <span id="nav-logo" style="font-size:16px;font-weight:700;letter-spacing:-0.02em"></span>
+  <button id="nav-cta" class="btn" style="background:#1A1A1A;color:#fff;border-radius:8px;padding:10px 20px;font-size:14px;font-weight:600"></button>
+</nav>
+
+<!-- HERO -->
+<div id="hero-section" style="padding:80px 24px 72px;text-align:center;background:linear-gradient(180deg,#F8F8F6 0%,#FFFFFF 100%)">
+  <div style="max-width:680px;margin:0 auto">
+    <div id="hero-badge" style="display:inline-block;font-size:12px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;background:#F2F1EE;color:#6B6B6B;padding:6px 14px;border-radius:99px;margin-bottom:24px"></div>
+    <h1 id="hero-title" style="font-size:52px;font-weight:800;letter-spacing:-0.03em;line-height:1.1;margin-bottom:20px"></h1>
+    <p id="hero-subtitle" style="font-size:18px;color:#6B6B6B;line-height:1.6;margin-bottom:40px;max-width:520px;margin-left:auto;margin-right:auto"></p>
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+      <button id="hero-cta-primary" class="btn" style="background:#1A1A1A;color:#fff;border-radius:10px;padding:16px 32px;font-size:16px;font-weight:700"></button>
+      <button id="hero-cta-secondary" class="btn" style="background:#FFFFFF;color:#1A1A1A;border:1px solid #E8E8E4;border-radius:10px;padding:16px 32px;font-size:16px;font-weight:600"></button>
+    </div>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<section id="features-section">
+  <div style="text-align:center;margin-bottom:48px">
+    <h2 id="features-title" style="font-size:36px;font-weight:800;letter-spacing:-0.02em;margin-bottom:12px"></h2>
+    <p id="features-subtitle" style="font-size:17px;color:#6B6B6B;max-width:480px;margin:0 auto"></p>
+  </div>
+  <div id="features-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px"></div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how-section" style="background:#F8F8F6;border-radius:20px;padding:64px 48px;margin:0 24px">
+  <div style="text-align:center;margin-bottom:48px">
+    <h2 id="how-title" style="font-size:36px;font-weight:800;letter-spacing:-0.02em;margin-bottom:12px"></h2>
+    <p id="how-subtitle" style="font-size:17px;color:#6B6B6B"></p>
+  </div>
+  <div id="how-steps" style="display:flex;flex-direction:column;gap:24px;max-width:600px;margin:0 auto"></div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing-section" style="text-align:center">
+  <h2 id="pricing-title" style="font-size:36px;font-weight:800;letter-spacing:-0.02em;margin-bottom:12px"></h2>
+  <p id="pricing-subtitle" style="font-size:17px;color:#6B6B6B;margin-bottom:40px"></p>
+  <div id="pricing-cards" style="display:flex;gap:20px;justify-content:center;flex-wrap:wrap"></div>
+</section>
+
+<!-- CTA FOOTER -->
+<div id="footer-cta" style="background:#1A1A1A;padding:80px 24px;text-align:center;margin-top:80px">
+  <h2 id="footer-title" style="font-size:36px;font-weight:800;color:#fff;letter-spacing:-0.02em;margin-bottom:16px"></h2>
+  <p id="footer-subtitle" style="font-size:17px;color:rgba(255,255,255,0.7);margin-bottom:32px"></p>
+  <button id="footer-cta-btn" class="btn" style="background:#fff;color:#1A1A1A;border-radius:10px;padding:16px 40px;font-size:16px;font-weight:700"></button>
+</div>
+
+<script>
+var APP_DATA = {{APP_DATA_JSON}};
+
+function init() {
+  var d = APP_DATA;
+
+  // Nav
+  document.getElementById("app-nav").style.display = d.nav?.show === false ? "none" : "";
+  setText("nav-logo", d.nav?.logo || d.hero?.title || "App");
+  setText("nav-cta", d.nav?.cta || "Get Started");
+
+  // Hero
+  setText("hero-badge", d.hero?.badge || "New");
+  setText("hero-title", d.hero?.title || "Your App");
+  setText("hero-subtitle", d.hero?.subtitle || "");
+  setText("hero-cta-primary", d.hero?.cta_primary || "Get Started Free");
+  setText("hero-cta-secondary", d.hero?.cta_secondary || "See How It Works");
+  if (d.hero?.bg_color) document.getElementById("hero-section").style.background = d.hero.bg_color;
+
+  // Features
+  setText("features-title", d.features?.title || "Everything you need");
+  setText("features-subtitle", d.features?.subtitle || "");
+  var grid = document.getElementById("features-grid");
+  (d.features?.items || []).forEach(function(f) {
+    var card = document.createElement("div");
+    card.style.cssText = "background:#fff;border:1px solid #E8E8E4;border-radius:16px;padding:28px";
+    card.innerHTML = '<div style="font-size:36px;margin-bottom:16px">' + (f.emoji || "✨") + '</div>' +
+      '<h3 style="font-size:18px;font-weight:700;margin-bottom:8px;letter-spacing:-0.01em">' + f.title + '</h3>' +
+      '<p style="font-size:14px;color:#6B6B6B;line-height:1.6">' + f.description + '</p>';
+    grid.appendChild(card);
+  });
+
+  // How it works
+  setText("how-title", d.how_it_works?.title || "How it works");
+  setText("how-subtitle", d.how_it_works?.subtitle || "");
+  var steps = document.getElementById("how-steps");
+  (d.how_it_works?.steps || []).forEach(function(s, i) {
+    var step = document.createElement("div");
+    step.style.cssText = "display:flex;align-items:flex-start;gap:20px";
+    step.innerHTML = '<div style="width:40px;height:40px;border-radius:50%;background:#1A1A1A;color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex-shrink:0">' + (i + 1) + '</div>' +
+      '<div><h4 style="font-size:17px;font-weight:700;margin-bottom:6px">' + s.title + '</h4>' +
+      '<p style="font-size:14px;color:#6B6B6B;line-height:1.6">' + s.description + '</p></div>';
+    steps.appendChild(step);
+  });
+
+  // Pricing
+  if (d.pricing) {
+    setText("pricing-title", d.pricing.title || "Simple pricing");
+    setText("pricing-subtitle", d.pricing.subtitle || "");
+    var cards = document.getElementById("pricing-cards");
+    (d.pricing.plans || []).forEach(function(p) {
+      var card = document.createElement("div");
+      card.style.cssText = "background:" + (p.highlight ? "#1A1A1A" : "#fff") + ";color:" + (p.highlight ? "#fff" : "#1A1A1A") + ";border:1px solid " + (p.highlight ? "#1A1A1A" : "#E8E8E4") + ";border-radius:20px;padding:32px;min-width:260px;text-align:left";
+      card.innerHTML = '<div style="font-size:14px;font-weight:600;margin-bottom:8px;opacity:0.7">' + p.name + '</div>' +
+        '<div style="font-size:40px;font-weight:800;letter-spacing:-0.03em;margin-bottom:4px">' + p.price + '</div>' +
+        '<div style="font-size:13px;opacity:0.6;margin-bottom:24px">' + (p.period || "") + '</div>' +
+        '<ul style="list-style:none;display:flex;flex-direction:column;gap:10px;margin-bottom:28px">' +
+        (p.features || []).map(function(f) { return '<li style="font-size:14px;display:flex;align-items:center;gap:8px"><span>' + (p.highlight ? "✓" : "✓") + '</span>' + f + '</li>'; }).join("") +
+        '</ul>' +
+        '<button class="btn" style="width:100%;background:' + (p.highlight ? "#fff" : "#1A1A1A") + ';color:' + (p.highlight ? "#1A1A1A" : "#fff") + ';border-radius:8px;padding:12px;font-size:15px;font-weight:700">' + (p.cta || "Get Started") + '</button>';
+      cards.appendChild(card);
+    });
+  } else {
+    document.getElementById("pricing-section").style.display = "none";
+  }
+
+  // Footer CTA
+  setText("footer-title", d.footer_cta?.title || "Ready to get started?");
+  setText("footer-subtitle", d.footer_cta?.subtitle || "");
+  setText("footer-cta-btn", d.footer_cta?.button || "Get Started Free");
+}
+
+function setText(id, text) {
+  var el = document.getElementById(id);
+  if (el) el.textContent = text;
+}
+
+init();
+</script>
+</body>
+</html>
