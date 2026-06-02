@@ -195,13 +195,16 @@ function showDetail(jobId) {
     (job.future ? '<div style="background:#FFD93D;color:#664400;display:inline-block;padding:4px 14px;border-radius:99px;font-size:12px;font-weight:700;margin-bottom:10px">FUTURE JOB - Growing Fast!</div>' : "") +
     '<h2 style="font-size:24px;font-weight:900;color:' + cat.color + ';margin-bottom:8px">' + job.name + '</h2>' +
     '<p style="font-size:15px;color:' + cat.color + ';opacity:0.85;line-height:1.6">' + job.detail + '</p></div>' +
-    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">' +
-    '<div style="background:#F8F8F6;border-radius:12px;padding:14px;text-align:center">' +
-    '<div style="font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#A0A0A0;margin-bottom:4px">Category</div>' +
-    '<div style="font-size:15px;font-weight:700">' + cat.emoji + " " + cat.name + '</div></div>' +
-    '<div style="background:#F8F8F6;border-radius:12px;padding:14px;text-align:center">' +
-    '<div style="font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#A0A0A0;margin-bottom:4px">Avg Salary</div>' +
-    '<div style="font-size:15px;font-weight:700">' + (job.wage || "Varies") + '</div></div></div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px">' +
+    '<div style="background:#F8F8F6;border-radius:12px;padding:12px;text-align:center">' +
+    '<div style="font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#A0A0A0;margin-bottom:4px">Category</div>' +
+    '<div style="font-size:13px;font-weight:700">' + cat.emoji + " " + cat.name + '</div></div>' +
+    '<div style="background:#F8F8F6;border-radius:12px;padding:12px;text-align:center">' +
+    '<div style="font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#A0A0A0;margin-bottom:4px">Avg Salary</div>' +
+    '<div style="font-size:13px;font-weight:700">' + (job.wage || "Varies") + '</div></div>' +
+    '<div style="background:#F8F8F6;border-radius:12px;padding:12px;text-align:center">' +
+    '<div style="font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#A0A0A0;margin-bottom:4px">Education</div>' +
+    '<div style="font-size:12px;font-weight:700">' + (job.education || "Varies") + '</div></div></div>' +
     richSections +
     '<button class="btn" id="detail-explore-more" style="width:100%;background:#1A1A1A;color:#fff;border-radius:14px;padding:14px;font-size:15px;font-weight:700;margin-top:4px">Explore More Jobs</button>';
 
