@@ -1,6 +1,6 @@
 import express from 'express'
 import { generateGameData, generateReleaseNotes } from './lib/generate.js'
-import { generateQuizExplorerContent, generateLandingPageContent } from './lib/content-gen.js'
+import { generateQuizExplorerContent, generateLandingPageContent, generateFlashcardContent } from './lib/content-gen.js'
 import { applyTemplate, detectTemplate, TEMPLATE_IDS } from './lib/templates.js'
 import { validateHTML } from './lib/validate.js'
 import { patchAndValidate } from './lib/patcher.js'
@@ -137,7 +137,9 @@ async function buildFromTemplate(ideaId, { founderNotes, founderAvoid, imageUrls
   // 2. Generate content JSON for the chosen template
   await log(ideaId, label, idea.name, 'generating_content', 'Generating content with Claude...')
   let appData
-  if (templateId === TEMPLATE_IDS.QUIZ_EXPLORER) {
+  if (templateId === TEMPLATE_IDS.FLASHCARD_APP) {
+    appData = await generateFlashcardContent({ name: idea.name, brief, founderNotes, founderAvoid })
+  } else if (templateId === TEMPLATE_IDS.QUIZ_EXPLORER) {
     appData = await generateQuizExplorerContent({ name: idea.name, brief, founderNotes, founderAvoid, imageUrls })
   } else {
     appData = await generateLandingPageContent({ name: idea.name, brief, founderNotes, founderAvoid })

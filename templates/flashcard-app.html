@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{APP_TITLE}}</title>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Geist",sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+:root{
+  --primary:{{PRIMARY}};
+  --accent:{{ACCENT}};
+  --bg:#F8FAFF;
+  --surface:#FFFFFF;
+  --text:#1A1A2E;
+  --text2:#6B7280;
+  --text3:#9CA3AF;
+  --border:#E5E7EB;
+  --radius:16px;
+}
+.hidden{display:none!important}
+.btn{border:none;cursor:pointer;font-family:inherit;transition:transform 0.12s,opacity 0.12s}
+.btn:active{transform:scale(0.96)}
+.back-btn{background:none;border:none;color:var(--text2);font-size:14px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px;padding:8px 0;margin-bottom:20px}
+
+/* Card flip */
+.card-scene{perspective:1000px;width:100%;max-width:480px;margin:0 auto;cursor:pointer}
+.card-3d{width:100%;min-height:220px;position:relative;transform-style:preserve-3d;transition:transform 0.5s cubic-bezier(0.4,0,0.2,1)}
+.card-3d.flipped{transform:rotateY(180deg)}
+.card-face{position:absolute;inset:0;backface-visibility:hidden;border-radius:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 28px;text-align:center}
+.card-front{background:var(--primary);color:#fff}
+.card-back{background:var(--surface);border:2px solid var(--primary);transform:rotateY(180deg)}
+.card-label{font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;opacity:0.6;margin-bottom:12px}
+.card-text{font-size:26px;font-weight:700;letter-spacing:-0.02em;line-height:1.3}
+.card-hint{font-size:13px;opacity:0.7;margin-top:10px;font-style:italic}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.fade-up{animation:fadeUp 0.3s ease-out}
+</style>
+</head>
+<body>
+
+<!-- HOME -->
+<div id="screen-home">
+  <!-- Header -->
+  <div style="background:var(--primary);padding:40px 24px 32px;text-align:center">
+    <div id="home-emoji" style="font-size:56px;margin-bottom:12px"></div>
+    <h1 id="home-title" style="color:#fff;font-size:30px;font-weight:800;letter-spacing:-0.02em;margin-bottom:8px"></h1>
+    <p id="home-subtitle" style="color:rgba(255,255,255,0.8);font-size:15px"></p>
+  </div>
+
+  <!-- Deck grid -->
+  <div style="padding:24px;max-width:640px;margin:0 auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <h2 style="font-size:17px;font-weight:700;color:var(--text)">Your Decks</h2>
+      <span id="deck-count" style="font-size:13px;color:var(--text3)"></span>
+    </div>
+    <div id="deck-grid" style="display:flex;flex-direction:column;gap:12px"></div>
+  </div>
+</div>
+
+<!-- DECK VIEW -->
+<div id="screen-deck" class="hidden" style="padding:24px;max-width:640px;margin:0 auto">
+  <button class="back-btn" id="deck-back">← All Decks</button>
+  <div id="deck-header" style="margin-bottom:24px"></div>
+  <div id="card-list" style="display:flex;flex-direction:column;gap:10px"></div>
+</div>
+
+<!-- STUDY MODE -->
+<div id="screen-study" class="hidden" style="padding:24px;max-width:520px;margin:0 auto">
+  <button class="back-btn" id="study-back">← Back to Deck</button>
+
+  <!-- Progress -->
+  <div style="margin-bottom:24px">
+    <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+      <span id="study-progress-text" style="font-size:13px;font-weight:600;color:var(--text2)"></span>
+      <span id="study-score" style="font-size:13px;font-weight:600;color:var(--primary)"></span>
+    </div>
+    <div style="height:6px;background:var(--border);border-radius:99px;overflow:hidden">
+      <div id="study-progress-bar" style="height:100%;background:var(--primary);border-radius:99px;transition:width 0.4s"></div>
+    </div>
+  </div>
+
+  <!-- Flip card -->
+  <div class="card-scene" id="card-scene" onclick="flipCard()">
+    <div class="card-3d" id="card-3d">
+      <div class="card-face card-front">
+        <div class="card-label">Tap to reveal</div>
+        <div class="card-text" id="card-front-text"></div>
+      </div>
+      <div class="card-face card-back">
+        <div class="card-label">Answer</div>
+        <div class="card-text" id="card-back-text"></div>
+        <div class="card-hint" id="card-hint-text"></div>
+      </div>
+    </div>
+  </div>
+
+  <p style="text-align:center;font-size:13px;color:var(--text3);margin:14px 0 20px">Tap the card to flip it</p>
+
+  <!-- Answer buttons (shown after flip) -->
+  <div id="answer-btns" class="hidden" style="display:flex;gap:10px">
+    <button class="btn" onclick="markCard(false)" style="flex:1;padding:14px;border-radius:12px;background:#FEF2F2;border:2px solid #FECACA;color:#DC2626;font-size:14px;font-weight:600">Try Again</button>
+    <button class="btn" onclick="markCard(true)"  style="flex:1;padding:14px;border-radius:12px;background:#F0FDF4;border:2px solid #BBF7D0;color:#16A34A;font-size:14px;font-weight:600">Got It ✓</button>
+  </div>
+</div>
+
+<!-- COMPLETE -->
+<div id="screen-complete" class="hidden" style="padding:40px 24px;max-width:480px;margin:0 auto;text-align:center">
+  <div style="font-size:72px;margin-bottom:16px">🎉</div>
+  <h2 id="complete-title" style="font-size:28px;font-weight:800;letter-spacing:-0.02em;margin-bottom:10px;color:var(--text)"></h2>
+  <p id="complete-score" style="font-size:18px;color:var(--primary);font-weight:700;margin-bottom:8px"></p>
+  <p id="complete-sub" style="font-size:15px;color:var(--text2);margin-bottom:32px"></p>
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <button class="btn" id="btn-study-again" style="padding:14px;border-radius:12px;background:var(--primary);color:#fff;font-size:15px;font-weight:700">Study Again</button>
+    <button class="btn" id="btn-back-decks"  style="padding:14px;border-radius:12px;background:var(--border);color:var(--text);font-size:15px;font-weight:600">Back to Decks</button>
+  </div>
+</div>
+
+<script>
+var APP_DATA = {{APP_DATA_JSON}};
+
+// Apply theme
+document.documentElement.style.setProperty("--primary", APP_DATA.app.primary || "#0F766E");
+document.documentElement.style.setProperty("--accent",  APP_DATA.app.accent  || "#6366F1");
+
+// State
+var currentDeck = null;
+var currentCards = [];
+var currentIdx   = 0;
+var correct      = 0;
+var isFlipped    = false;
+
+// ── Router ────────────────────────────────────────────────────────────────────
+var SCREENS = ["home","deck","study","complete"];
+function show(name) {
+  SCREENS.forEach(function(s) {
+    var el = document.getElementById("screen-" + s);
+    if (el) el.classList.add("hidden");
+  });
+  var t = document.getElementById("screen-" + name);
+  if (t) { t.classList.remove("hidden"); t.classList.add("fade-up"); }
+  window.scrollTo(0, 0);
+}
+
+// ── Build home ────────────────────────────────────────────────────────────────
+function buildHome() {
+  var a = APP_DATA.app;
+  document.getElementById("home-emoji").textContent   = a.emoji   || "🃏";
+  document.getElementById("home-title").textContent   = a.title   || "Flash Cards";
+  document.getElementById("home-subtitle").textContent = a.subtitle || "Flip, learn, repeat";
+  document.getElementById("deck-count").textContent   = APP_DATA.decks.length + " deck" + (APP_DATA.decks.length !== 1 ? "s" : "");
+
+  var grid = document.getElementById("deck-grid");
+  APP_DATA.decks.forEach(function(deck) {
+    var card = document.createElement("div");
+    card.style.cssText = "background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;cursor:pointer;display:flex;align-items:center;gap:16px;transition:box-shadow 0.15s,transform 0.15s";
+    card.innerHTML =
+      '<div style="width:52px;height:52px;border-radius:14px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0">' + deck.emoji + '</div>' +
+      '<div style="flex:1;min-width:0">' +
+        '<div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:3px">' + deck.title + '</div>' +
+        '<div style="font-size:13px;color:var(--text2)">' + deck.description + '</div>' +
+        '<div style="font-size:12px;color:var(--text3);margin-top:4px">' + deck.cards.length + ' cards</div>' +
+      '</div>' +
+      '<div style="font-size:20px;color:var(--text3)">›</div>';
+    card.onmouseenter = function() { this.style.boxShadow = "0 4px 16px rgba(0,0,0,0.08)"; this.style.transform = "translateY(-1px)"; };
+    card.onmouseleave = function() { this.style.boxShadow = "none"; this.style.transform = "none"; };
+    card.setAttribute("data-deckid", deck.id);
+    card.addEventListener("click", function() { openDeck(this.getAttribute("data-deckid")); });
+    grid.appendChild(card);
+  });
+}
+
+// ── Open deck ─────────────────────────────────────────────────────────────────
+function openDeck(deckId) {
+  currentDeck = APP_DATA.decks.find(function(d) { return d.id === deckId; });
+  if (!currentDeck) return;
+
+  document.getElementById("deck-header").innerHTML =
+    '<div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">' +
+    '<div style="width:56px;height:56px;border-radius:14px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:28px">' + currentDeck.emoji + '</div>' +
+    '<div><div style="font-size:20px;font-weight:800;color:var(--text)">' + currentDeck.title + '</div>' +
+    '<div style="font-size:13px;color:var(--text2)">' + currentDeck.description + '</div></div></div>' +
+    '<button class="btn" onclick="startStudy()" style="width:100%;padding:14px;border-radius:12px;background:var(--primary);color:#fff;font-size:15px;font-weight:700">Study All ' + currentDeck.cards.length + ' Cards →</button>';
+
+  var list = document.getElementById("card-list");
+  list.innerHTML = "";
+  currentDeck.cards.forEach(function(card, i) {
+    var row = document.createElement("div");
+    row.style.cssText = "background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;display:flex;align-items:flex-start;gap:14px";
+    row.innerHTML =
+      '<div style="width:28px;height:28px;border-radius:8px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--text2);flex-shrink:0;margin-top:1px">' + (i+1) + '</div>' +
+      '<div style="flex:1;min-width:0">' +
+        '<div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px">' + card.front + '</div>' +
+        '<div style="font-size:13px;color:var(--text2)">' + card.back + '</div>' +
+      '</div>';
+    list.appendChild(row);
+  });
+
+  document.getElementById("deck-back").onclick = function() { show("home"); };
+  show("deck");
+}
+
+// ── Study mode ────────────────────────────────────────────────────────────────
+function startStudy() {
+  if (!currentDeck) return;
+  currentCards = currentDeck.cards.slice().sort(function() { return Math.random() - 0.5; });
+  currentIdx = 0;
+  correct = 0;
+  isFlipped = false;
+  document.getElementById("study-back").onclick = function() { show("deck"); };
+  showCard();
+  show("study");
+}
+
+function showCard() {
+  var card = currentCards[currentIdx];
+  isFlipped = false;
+  var el3d = document.getElementById("card-3d");
+  el3d.classList.remove("flipped");
+  document.getElementById("card-front-text").textContent = card.front;
+  document.getElementById("card-back-text").textContent  = card.back;
+  document.getElementById("card-hint-text").textContent  = card.hint || "";
+  document.getElementById("answer-btns").classList.add("hidden");
+
+  var pct = (currentIdx / currentCards.length) * 100;
+  document.getElementById("study-progress-bar").style.width = pct + "%";
+  document.getElementById("study-progress-text").textContent = "Card " + (currentIdx + 1) + " of " + currentCards.length;
+  document.getElementById("study-score").textContent = correct + " correct";
+}
+
+function flipCard() {
+  if (isFlipped) return;
+  isFlipped = true;
+  document.getElementById("card-3d").classList.add("flipped");
+  setTimeout(function() {
+    document.getElementById("answer-btns").classList.remove("hidden");
+  }, 300);
+}
+
+function markCard(gotIt) {
+  if (gotIt) correct++;
+  currentIdx++;
+  if (currentIdx >= currentCards.length) {
+    showComplete();
+  } else {
+    showCard();
+  }
+}
+
+function showComplete() {
+  var pct = Math.round((correct / currentCards.length) * 100);
+  var emoji = pct >= 80 ? "🎉" : pct >= 60 ? "👍" : "💪";
+  document.querySelector("#screen-complete div").textContent = emoji;
+  document.getElementById("complete-title").textContent = pct >= 80 ? "Nice work!" : pct >= 60 ? "Good effort!" : "Keep practicing!";
+  document.getElementById("complete-score").textContent = correct + " / " + currentCards.length + " correct (" + pct + "%)";
+  document.getElementById("complete-sub").textContent = pct >= 80 ? "You are really getting the hang of this!" : "A little more practice and you will nail it!";
+  document.getElementById("btn-study-again").onclick = startStudy;
+  document.getElementById("btn-back-decks").onclick = function() { show("home"); };
+  show("complete");
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+buildHome();
+show("home");
+</script>
+</body>
+</html>
