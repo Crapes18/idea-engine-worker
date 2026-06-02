@@ -75,6 +75,10 @@ app.post('/build', auth, async (req, res) => {
   // Acknowledge immediately — work happens async
   res.json({ accepted: true, ideaId, jobType })
 
+  // Log acceptance immediately — before any async work
+  // If this appears in DB but 'started' never does, the container was killed mid-startup
+  log(ideaId, jobType, null, 'accepted', `Job accepted: ${jobType}`).catch(() => {})
+
   try {
     const { founderNotes, monetization, gameName, gameDescription } = req.body
     if (jobType === 'prototype') await buildPrototype(ideaId, { founderNotes, founderAvoid: req.body.founderAvoid, imageUrls: req.body.imageUrls, monetization })
