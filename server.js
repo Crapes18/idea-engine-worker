@@ -9,6 +9,7 @@ import { createProject, triggerAndWaitForDeploy } from './lib/vercel.js'
 import {
   getIdea, getBrief, setStatus, createApproval, recoverStuckBuilds
 } from './lib/supabase.js'
+import { log, logError, logSuccess } from './lib/logger.js'
 
 const ROG_REPO = process.env.ROG_REPO || 'rules-of-games'
 const ROG_VERCEL_PROJECT = process.env.ROG_VERCEL_PROJECT || 'app'
@@ -82,17 +83,11 @@ app.post('/build', auth, async (req, res) => {
     else if (jobType === 'add_game') await addGame(ideaId, gameName, gameDescription)
     else console.warn(`[worker] Unknown jobType: ${jobType}`)
   } catch (err) {
-    const errMsg = err?.message || String(err)
-    console.error(`[worker] Job failed for ${ideaId}:`, errMsg)
+    const jobType = req?.body?.jobType || 'unknown'
+    const ideaName = req?.body?.ideaName || ideaId
+    // logError writes to Supabase AND console, never throws
+    await logError(ideaId, jobType, ideaName, 'job_failed', err)
     await setStatus(ideaId, 'draft', null).catch(e => console.warn('[worker] Failed to reset status:', e.message))
-    // Create a build_failed approval so the error is visible in the dashboard
-    await createApproval({
-      ideaId,
-      stage: 'prototype',
-      type: 'build_failed',
-      summary: `Build failed: ${errMsg.slice(0, 200)}`,
-      payload: { error: errMsg, jobType: req?.body?.jobType || 'unknown', timestamp: new Date().toISOString() },
-    }).catch(() => {})
   }
 })
 
@@ -114,33 +109,33 @@ async function buildFromTemplate(ideaId, { founderNotes, founderAvoid, imageUrls
   if (!idea) throw new Error('Idea not found')
 
   await setStatus(ideaId, 'building')
+  await log(ideaId, label, idea.name, 'started', `Build started — ${isRevision ? 'revision' : 'first prototype'}`)
 
   // 1. Detect which template to use based on idea type
   const templateId = detectTemplate(brief, founderNotes, idea.name)
-  console.log(`[${label}] Using template: ${templateId}`)
-  if (founderNotes) console.log(`[${label}] Founder notes: ${founderNotes.slice(0, 100)}`)
+  await log(ideaId, label, idea.name, 'template_selected', `Using template: ${templateId}`)
 
-  // 2. Generate content JSON for the chosen template (short, reliable — no HTML syntax risk)
-  console.log(`[${label}] Generating content JSON...`)
+  // 2. Generate content JSON for the chosen template
+  await log(ideaId, label, idea.name, 'generating_content', 'Generating content with Claude...')
   let appData
   if (templateId === TEMPLATE_IDS.QUIZ_EXPLORER) {
     appData = await generateQuizExplorerContent({ name: idea.name, brief, founderNotes, founderAvoid, imageUrls })
   } else {
     appData = await generateLandingPageContent({ name: idea.name, brief, founderNotes, founderAvoid })
   }
-  console.log(`[${label}] Content generated: ${appData.careers?.length || 0} careers, ${appData.categories?.length || 0} categories`)
+  await log(ideaId, label, idea.name, 'content_generated', `Content ready: ${appData.careers?.length || 0} careers, ${appData.categories?.length || 0} categories`)
 
-  // 3. Apply template (pre-validated HTML + JS, just inject data)
-  console.log(`[${label}] Applying template...`)
+  // 3. Apply template
+  await log(ideaId, label, idea.name, 'applying_template', 'Injecting content into HTML template...')
   const html = applyTemplate(templateId, appData)
 
-  // 4. Validate generated HTML (JS syntax check via Node.js)
-  console.log(`[${label}] Validating HTML...`)
+  // 4. Validate generated HTML
+  await log(ideaId, label, idea.name, 'validating', 'Running JS syntax validation...')
   const validation = validateHTML(html)
   if (!validation.valid) {
     throw new Error(`HTML validation failed: ${validation.errors.join('; ')}`)
   }
-  console.log(`[${label}] Validation passed`)
+  await log(ideaId, label, idea.name, 'validated', `Validation passed — ${html.length} chars`)
 
   const files = [
     { path: 'index.html', content: html },
@@ -148,16 +143,16 @@ async function buildFromTemplate(ideaId, { founderNotes, founderAvoid, imageUrls
   ]
 
   // 5. Create/update GitHub repo
-  console.log(`[${label}] Creating/updating GitHub repo: ${idea.slug}`)
+  await log(ideaId, label, idea.name, 'github_push', `Pushing to GitHub repo: ${idea.slug}`)
   await createRepo(idea.slug, idea.one_liner || idea.name)
   await pushFiles(idea.slug, files)
   const githubUrl = repoUrl(idea.slug)
-  console.log(`[${label}] Pushed: ${githubUrl}`)
+  await log(ideaId, label, idea.name, 'github_pushed', `Pushed to ${githubUrl}`)
 
-  // 6. Enable GitHub Pages and wait for it to be live
-  console.log(`[${label}] Enabling GitHub Pages...`)
+  // 6. Enable GitHub Pages
+  await log(ideaId, label, idea.name, 'pages_deploy', 'Enabling GitHub Pages and waiting for URL to go live...')
   const deployUrl = await enableGitHubPages(idea.slug)
-  console.log(`[${label}] Live at: ${deployUrl}`)
+  await log(ideaId, label, idea.name, 'pages_live', `Live at: ${deployUrl}`)
 
   // 7. Create approval
   const summary = isRevision
@@ -173,7 +168,7 @@ async function buildFromTemplate(ideaId, { founderNotes, founderAvoid, imageUrls
   })
 
   await setStatus(ideaId, 'in_review', null)
-  console.log(`[${label}] Done for "${idea.name}" — ${deployUrl}`)
+  await logSuccess(ideaId, label, idea.name, `Done — live at ${deployUrl}`)
 }
 
 async function patchPrototype(ideaId, { spec, previousDeployUrl } = {}) {
