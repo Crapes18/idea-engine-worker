@@ -1,6 +1,6 @@
 import express from 'express'
 import { generatePrototype, generateGameData, generateReleaseNotes } from './lib/generate.js'
-import { createRepo, pushFiles, repoUrl, readFile, updateFile } from './lib/github.js'
+import { createRepo, pushFiles, repoUrl, readFile, updateFile, enableGitHubPages } from './lib/github.js'
 import { createProject, triggerAndWaitForDeploy } from './lib/vercel.js'
 import {
   getIdea, getBrief, setStatus, createApproval
@@ -117,14 +117,10 @@ async function buildPrototype(ideaId, { founderNotes, founderAvoid, imageUrls, m
   const githubUrl = repoUrl(idea.slug)
   console.log(`[prototype] Pushed: ${githubUrl}`)
 
-  // 4. Create Vercel project linked to GitHub repo
-  console.log(`[prototype] Creating Vercel project...`)
-  await createProject(idea.slug, idea.one_liner || idea.name)
-
-  // 5. Wait for Vercel to deploy
-  console.log(`[prototype] Waiting for Vercel deployment...`)
-  const deployUrl = await triggerAndWaitForDeploy(idea.slug)
-  console.log(`[prototype] Deployed: ${deployUrl}`)
+  // 4. Enable GitHub Pages (no Vercel project needed for prototypes)
+  console.log(`[prototype] Enabling GitHub Pages...`)
+  const deployUrl = await enableGitHubPages(idea.slug)
+  console.log(`[prototype] Pages URL: ${deployUrl}`)
 
   // 6. Create approval in dashboard
   await createApproval({
@@ -167,8 +163,9 @@ async function revisePrototype(ideaId, { founderNotes, founderAvoid, imageUrls, 
   await pushFiles(idea.slug, files)
   const githubUrl = repoUrl(idea.slug)
 
-  const deployUrl = await triggerAndWaitForDeploy(ROG_VERCEL_PROJECT || idea.slug)
-  console.log(`[revise] Deployed: ${deployUrl}`)
+  console.log(`[revise] Enabling GitHub Pages...`)
+  const deployUrl = await enableGitHubPages(idea.slug)
+  console.log(`[revise] Pages URL: ${deployUrl}`)
 
   await createApproval({
     ideaId,
