@@ -3,7 +3,7 @@ import { generatePrototype, generateGameData, generateReleaseNotes } from './lib
 import { createRepo, pushFiles, repoUrl, readFile, updateFile, enableGitHubPages } from './lib/github.js'
 import { createProject, triggerAndWaitForDeploy } from './lib/vercel.js'
 import {
-  getIdea, getBrief, setStatus, createApproval
+  getIdea, getBrief, setStatus, createApproval, recoverStuckBuilds
 } from './lib/supabase.js'
 
 const ROG_REPO = process.env.ROG_REPO || 'rules-of-games'
@@ -78,9 +78,20 @@ app.post('/build', auth, async (req, res) => {
     else console.warn(`[worker] Unknown jobType: ${jobType}`)
   } catch (err) {
     console.error(`[worker] Job failed for ${ideaId}:`, err)
-    await setStatus(ideaId, 'draft').catch(() => {})
+    // Clear building_context alongside resetting to draft
+    await setStatus(ideaId, 'draft', null).catch(e => console.warn('[worker] Failed to reset status:', e.message))
   }
 })
+
+// Auto-recover stuck builds on a schedule
+app.post('/recover', auth, async (req, res) => {
+  await recoverStuckBuilds()
+  res.json({ ok: true })
+})
+
+// Run recovery on startup and every 10 minutes
+recoverStuckBuilds().catch(() => {})
+setInterval(() => recoverStuckBuilds().catch(() => {}), 10 * 60 * 1000)
 
 async function buildPrototype(ideaId, { founderNotes, founderAvoid, imageUrls, monetization } = {}) {
   console.log(`[prototype] Starting for idea ${ideaId}`)
@@ -106,6 +117,18 @@ async function buildPrototype(ideaId, { founderNotes, founderAvoid, imageUrls, m
     monetization,
   })
   console.log(`[prototype] Generated ${files.length} files`)
+
+  // Validate HTML has real body content — reject CSS-only files
+  const htmlFile = files.find(f => f.path === 'index.html')
+  if (htmlFile) {
+    const bodyStart = htmlFile.content.indexOf('<body')
+    const bodyContent = bodyStart !== -1 ? htmlFile.content.slice(bodyStart + 5) : ''
+    const strippedContent = bodyContent.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()
+    if (strippedContent.length < 100) {
+      throw new Error(`Generated HTML has no body content (${strippedContent.length} chars after tags). CSS-only file rejected.`)
+    }
+    console.log(`[prototype] HTML validation passed — ${strippedContent.length} chars of body content`)
+  }
 
   // 2. Create GitHub repo
   console.log(`[prototype] Creating GitHub repo: ${idea.slug}`)
@@ -159,6 +182,17 @@ async function revisePrototype(ideaId, { founderNotes, founderAvoid, imageUrls, 
     imageUrls,
   })
 
+  // Validate HTML body content before pushing
+  const htmlFile = files.find(f => f.path === 'index.html')
+  if (htmlFile) {
+    const bodyStart = htmlFile.content.indexOf('<body')
+    const strippedContent = (bodyStart !== -1 ? htmlFile.content.slice(bodyStart + 5) : '').replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()
+    if (strippedContent.length < 100) {
+      throw new Error(`Revised HTML has no body content (${strippedContent.length} chars). CSS-only file rejected.`)
+    }
+    console.log(`[revise] HTML validation passed — ${strippedContent.length} chars of body content`)
+  }
+
   console.log(`[revise] Generated ${files.length} files — pushing to GitHub...`)
   await pushFiles(idea.slug, files)
   const githubUrl = repoUrl(idea.slug)
@@ -189,6 +223,23 @@ async function addGame(ideaId, gameName, gameDescription) {
   // 2. Read current games.ts from GitHub
   console.log(`[add_game] Reading games.ts from ${ROG_REPO}...`)
   const { content: gamesTs, sha } = await readFile(ROG_REPO, 'lib/games.ts')
+
+  // Check for duplicate — if slug already exists, skip insert and go straight to release notes
+  if (gamesTs.includes(`slug: '${gameData.slug}'`) || gamesTs.includes(`slug: "${gameData.slug}"`)) {
+    console.log(`[add_game] "${gameData.name}" already exists in games.ts — skipping insert`)
+    const deployUrl = process.env.ROG_VERCEL_URL || `https://${process.env.GITHUB_USERNAME || 'crapes18'}.github.io/${ROG_REPO}`
+    const release = await generateReleaseNotes(gameName, '0.1.2')
+    await createApproval({
+      ideaId,
+      stage: 'live',
+      type: 'release_ready',
+      summary: `"${gameName}" is already in the app and deployed. Review the live app, then mark as shipped.`,
+      payload: { gameName, deployUrl, githubUrl: `https://github.com/${process.env.GITHUB_USERNAME || 'Crapes18'}/${ROG_REPO}`, releaseNotes: release.releaseNotes, testChecklist: release.testChecklist, versionBump: release.version },
+    })
+    await setStatus(ideaId, 'in_review', null)
+    console.log(`[add_game] Duplicate handled for "${gameName}"`)
+    return
+  }
 
   // 3. Read package.json for current version
   const { content: pkgJson, sha: pkgSha } = await readFile(ROG_REPO, 'package.json')
