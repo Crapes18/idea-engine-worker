@@ -97,9 +97,24 @@ app.post('/recover', auth, async (req, res) => {
   res.json({ ok: true })
 })
 
+// Re-trigger function passed to recovery — calls our own /build endpoint
+function retrigger(ideaId, jobType, founderNotes) {
+  import('http').then(({ default: http }) => {
+    const body = JSON.stringify({ ideaId, jobType, founderNotes })
+    const port = process.env.PORT || 3001
+    const req = http.request({
+      hostname: 'localhost', port: Number(port), path: '/build', method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-worker-secret': WORKER_SECRET, 'Content-Length': Buffer.byteLength(body) }
+    }, () => {})
+    req.on('error', e => console.warn('[recover] Re-trigger failed:', e.message))
+    req.write(body)
+    req.end()
+  }).catch(e => console.warn('[recover] http import failed:', e.message))
+}
+
 // Run recovery on startup and every 10 minutes
-recoverStuckBuilds().catch(() => {})
-setInterval(() => recoverStuckBuilds().catch(() => {}), 10 * 60 * 1000)
+recoverStuckBuilds(retrigger).catch(() => {})
+setInterval(() => recoverStuckBuilds(retrigger).catch(() => {}), 10 * 60 * 1000)
 
 async function buildFromTemplate(ideaId, { founderNotes, founderAvoid, imageUrls, monetization, isRevision = false } = {}) {
   const label = isRevision ? 'revise' : 'prototype'
@@ -339,4 +354,8 @@ ${gameData.rules.map(r => `      { title: '${r.title.replace(/'/g, "\\'")}', bod
 }
 
 const PORT = process.env.PORT || 3001
-app.listen(PORT, () => console.log(`[worker] Listening on port ${PORT}`))
+app.listen(PORT, () => {
+  console.log(`[worker] Listening on port ${PORT}`)
+  // Fix 4: Log startup so we can correlate Railway deployments with build failures
+  log(null, 'worker', 'system', 'startup', `Worker started on port ${PORT} — ready for jobs`).catch(() => {})
+})
