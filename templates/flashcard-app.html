@@ -139,7 +139,18 @@ body{font-family:"Geist",sans-serif;background:var(--bg);color:var(--text);min-h
 
   <!-- Text input -->
   <div id="import-input-section">
-    <textarea id="import-text" rows="10" placeholder="Paste your cards here...&#10;&#10;Q: What is the capital of France?&#10;A: Paris&#10;&#10;Q: What is 2 + 2?&#10;A: 4"
+
+    <!-- File upload -->
+    <label style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:20px;background:var(--bg);border:2px dashed var(--border);border-radius:12px;cursor:pointer;margin-bottom:12px;font-size:14px;font-weight:600;color:var(--text2);transition:border-color 0.15s"
+      onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border)'">
+      <span style="font-size:24px">📁</span>
+      Upload a file (.txt, .csv)
+      <input type="file" accept=".txt,.csv,.tsv" style="display:none" onchange="handleFileUpload(this)">
+    </label>
+
+    <div style="text-align:center;font-size:12px;color:var(--text3);margin-bottom:12px">— or paste text below —</div>
+
+    <textarea id="import-text" rows="8" placeholder="Paste your cards here...&#10;&#10;Q: What is the capital of France?&#10;A: Paris&#10;&#10;Q: What is 2 + 2?&#10;A: 4"
       style="width:100%;background:var(--surface);border:2px solid var(--border);border-radius:12px;padding:14px;font-size:14px;color:var(--text);outline:none;resize:vertical;font-family:inherit;line-height:1.6"
       onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'"></textarea>
     <button class="btn" onclick="parseImport()" style="width:100%;margin-top:10px;padding:14px;border-radius:12px;background:var(--primary);color:#fff;font-size:15px;font-weight:700">
@@ -323,6 +334,16 @@ function showComplete() {
 
 // ── Import ────────────────────────────────────────────────────────────────────
 var parsedImportCards = [];
+
+function handleFileUpload(input) {
+  var file = input.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    document.getElementById("import-text").value = e.target.result;
+  };
+  reader.readAsText(file);
+}
 
 function parseImport() {
   var text = document.getElementById("import-text").value.trim();
