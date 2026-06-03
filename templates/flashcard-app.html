@@ -4,293 +4,370 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Flash Card App</title>
-<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Geist',system-ui,sans-serif;background:#fff;color:#1A1A1A;min-height:100vh}
+body{font-family:'Geist',system-ui,sans-serif;background:#FFFBF7;color:#1A1A1A;min-height:100vh}
+
+/* ── Tokens ── */
+:root{
+  --bg:#FFFBF7;
+  --surface:#FFFFFF;
+  --surface2:#FFF5EC;
+  --border:#F0E8DF;
+  --text:#1A1A1A;
+  --text2:#6B6B6B;
+  --text3:#A0A0A0;
+  --radius-sm:10px;
+  --radius:16px;
+  --radius-lg:20px;
+}
+
+/* ── Utilities ── */
 .hidden{display:none!important}
-.screen{padding:24px;max-width:600px;margin:0 auto}
+.screen{max-width:640px;margin:0 auto;padding:24px 20px;min-height:100vh}
 @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-.fade-up{animation:fadeUp 0.2s ease-out}
+.fade-up{animation:fadeUp 0.25s ease-out}
 
-/* Breadcrumb */
-.breadcrumb{display:flex;align-items:center;gap:6px;font-size:13px;color:#6B6B6B;margin-bottom:24px;flex-wrap:wrap}
-.breadcrumb button{background:none;border:none;color:#6B6B6B;cursor:pointer;font-size:13px;font-family:inherit;padding:0}
-.breadcrumb button:hover{color:#1A1A1A}
-.breadcrumb span{color:#A0A0A0}
+/* ── Subject color palettes ── */
+.pal-0{--c:#FF6B6B;--cb:#FFF0F0;--cd:#CC4444}
+.pal-1{--c:#4ECDC4;--cb:#F0FFFE;--cd:#2EA8A0}
+.pal-2{--c:#A855F7;--cb:#FAF0FF;--cd:#8833DD}
+.pal-3{--c:#F59E0B;--cb:#FFFBF0;--cd:#D97706}
+.pal-4{--c:#3B82F6;--cb:#F0F7FF;--cd:#2563EB}
+.pal-5{--c:#10B981;--cb:#F0FFF8;--cd:#059669}
+.pal-6{--c:#EC4899;--cb:#FFF0F8;--cd:#BE185D}
+.pal-7{--c:#8B5CF6;--cb:#F5F0FF;--cd:#6D28D9}
 
-/* Page header */
-.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
-.page-title{font-size:22px;font-weight:600;letter-spacing:-0.01em}
+/* ── Top bar ── */
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px}
+.topbar-title{font-size:22px;font-weight:700;letter-spacing:-0.02em;color:var(--text)}
+.topbar-sub{font-size:13px;color:var(--text3);margin-top:2px}
 
-/* Buttons */
-.btn{border:none;cursor:pointer;font-family:inherit;font-size:14px;font-weight:500;border-radius:8px;padding:10px 20px;transition:opacity 0.1s,transform 0.1s}
+/* ── Breadcrumb ── */
+.breadcrumb{display:flex;align-items:center;gap:6px;margin-bottom:24px;flex-wrap:wrap}
+.breadcrumb-btn{background:none;border:none;font-family:inherit;font-size:14px;color:var(--text3);cursor:pointer;padding:4px 8px;border-radius:8px;transition:background 0.1s,color 0.1s}
+.breadcrumb-btn:hover{background:var(--border);color:var(--text)}
+.breadcrumb-sep{color:var(--text3);font-size:14px}
+.breadcrumb-current{font-size:14px;font-weight:600;color:var(--text);padding:4px 8px}
+
+/* ── Subject cards grid ── */
+.subjects-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+@media(min-width:480px){.subjects-grid{grid-template-columns:repeat(2,1fr)}}
+
+.subject-card{background:var(--surface);border:2px solid var(--border);border-radius:var(--radius-lg);padding:20px;cursor:pointer;transition:transform 0.15s,box-shadow 0.15s,border-color 0.15s;position:relative;overflow:hidden}
+.subject-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,0.08);border-color:var(--c)}
+.subject-card:active{transform:scale(0.97)}
+.subject-card-accent{position:absolute;top:0;left:0;right:0;height:4px;background:var(--c);border-radius:var(--radius-lg) var(--radius-lg) 0 0}
+.subject-emoji{font-size:36px;margin-bottom:10px;display:block}
+.subject-name{font-size:15px;font-weight:600;color:var(--text);margin-bottom:4px}
+.subject-meta{font-size:12px;color:var(--text3)}
+.subject-actions{display:flex;align-items:center;justify-content:space-between;margin-top:12px}
+.subject-study-btn{background:var(--c);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:opacity 0.1s}
+.subject-study-btn:hover{opacity:0.85}
+
+/* ── Add subject card ── */
+.add-subject-card{background:var(--surface2);border:2px dashed var(--border);border-radius:var(--radius-lg);padding:20px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:130px;transition:border-color 0.15s,background 0.15s}
+.add-subject-card:hover{border-color:#F59E0B;background:#FFFBF0}
+.add-icon{width:36px;height:36px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--text3)}
+.add-label{font-size:13px;color:var(--text3);font-weight:500}
+
+/* ── Topic rows ── */
+.topic-list{display:flex;flex-direction:column;gap:10px}
+.topic-row{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);padding:16px 18px;cursor:pointer;display:flex;align-items:center;gap:14px;transition:border-color 0.15s,transform 0.1s}
+.topic-row:hover{border-color:var(--c,#F59E0B);transform:translateX(2px)}
+.topic-row:active{transform:scale(0.98)}
+.topic-icon{width:42px;height:42px;border-radius:12px;background:var(--cb,#FFF5EC);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;color:var(--c,#F59E0B)}
+.topic-body{flex:1;min-width:0}
+.topic-name{font-size:15px;font-weight:600;color:var(--text);margin-bottom:2px}
+.topic-meta{font-size:12px;color:var(--text3)}
+.topic-arrow{color:var(--text3);font-size:16px;flex-shrink:0}
+
+/* ── Card list ── */
+.card-list{display:flex;flex-direction:column;gap:8px}
+.card-row{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;display:flex;gap:12px;align-items:flex-start}
+.card-num{width:26px;height:26px;border-radius:8px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--text3);flex-shrink:0;margin-top:1px}
+.card-body{flex:1;min-width:0}
+.card-front{font-size:14px;font-weight:500;color:var(--text);margin-bottom:3px}
+.card-back{font-size:13px;color:var(--text2);line-height:1.4}
+.card-delete{background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:2px 6px;border-radius:6px;flex-shrink:0;transition:background 0.1s,color 0.1s}
+.card-delete:hover{background:#FFF0F0;color:#CC4444}
+
+/* ── Action bar ── */
+.action-bar{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap}
+.btn{border:none;cursor:pointer;font-family:inherit;font-size:14px;font-weight:500;border-radius:10px;padding:10px 18px;transition:opacity 0.1s,transform 0.1s}
 .btn:active{transform:scale(0.97)}
 .btn-primary{background:#1A1A1A;color:#fff}
 .btn-primary:hover{background:#333}
-.btn-secondary{background:#fff;color:#1A1A1A;border:1px solid #E8E8E4}
-.btn-secondary:hover{background:#F8F8F6}
-.btn-danger{background:#C0392B;color:#fff}
-.btn-sm{padding:7px 14px;font-size:13px}
-.btn-icon{padding:8px;border-radius:8px;background:none;border:1px solid #E8E8E4;cursor:pointer;font-size:16px;line-height:1;display:flex;align-items:center;justify-content:center}
-.btn-icon:hover{background:#F8F8F6}
+.btn-accent{background:var(--c,#F59E0B);color:#fff}
+.btn-accent:hover{opacity:0.85}
+.btn-ghost{background:var(--surface);border:1.5px solid var(--border);color:var(--text)}
+.btn-ghost:hover{background:var(--surface2)}
+.btn-sm{padding:8px 14px;font-size:13px}
+.btn-full{width:100%}
 
-/* Cards */
-.card{background:#fff;border:1px solid #E8E8E4;border-radius:12px;padding:20px}
+/* ── Study mode ── */
+.study-wrap{padding:0}
+.study-progress-bar{height:6px;background:var(--border);border-radius:99px;overflow:hidden;margin-bottom:24px}
+.study-progress-fill{height:100%;border-radius:99px;transition:width 0.4s ease}
+.study-meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.study-count{font-size:13px;font-weight:500;color:var(--text2)}
+.study-score{font-size:13px;font-weight:600;color:var(--text)}
 
-/* List items */
-.list-item{display:flex;align-items:center;gap:14px;padding:16px;border:1px solid #E8E8E4;border-radius:12px;cursor:pointer;transition:background 0.1s;margin-bottom:10px}
-.list-item:hover{background:#F8F8F6}
-.list-item-icon{width:44px;height:44px;border-radius:10px;background:#F8F8F6;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
-.list-item-body{flex:1;min-width:0}
-.list-item-title{font-size:15px;font-weight:500;color:#1A1A1A;margin-bottom:2px}
-.list-item-meta{font-size:13px;color:#6B6B6B}
-.list-item-arrow{color:#A0A0A0;font-size:18px}
-
-/* Inputs */
-input,textarea{width:100%;background:#F8F8F6;border:1px solid #E8E8E4;border-radius:8px;padding:10px 14px;font-size:14px;color:#1A1A1A;font-family:inherit;outline:none}
-input:focus,textarea:focus{border-color:#1A1A1A}
-textarea{resize:vertical;line-height:1.5}
-label.field-label{display:block;font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#6B6B6B;margin-bottom:6px}
-
-/* Inline form */
-.inline-form{background:#F8F8F6;border-radius:12px;padding:16px;margin-bottom:16px;display:flex;flex-direction:column;gap:10px}
-
-/* Flip card */
-.card-scene{perspective:1000px;width:100%;max-width:480px;margin:0 auto 20px;cursor:pointer}
-.card-3d{width:100%;min-height:200px;position:relative;transform-style:preserve-3d;transition:transform 0.5s cubic-bezier(0.4,0,0.2,1)}
+/* ── Flip card ── */
+.card-scene{perspective:1000px;cursor:pointer;margin-bottom:20px}
+.card-3d{position:relative;min-height:240px;transform-style:preserve-3d;transition:transform 0.5s cubic-bezier(0.4,0,0.2,1)}
 .card-3d.flipped{transform:rotateY(180deg)}
-.card-face{position:absolute;inset:0;backface-visibility:hidden;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px;text-align:center}
-.card-front{background:#1A1A1A;color:#fff}
-.card-back{background:#fff;border:2px solid #1A1A1A;transform:rotateY(180deg);color:#1A1A1A}
-.card-label{font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;opacity:0.5;margin-bottom:10px}
-.card-text{font-size:22px;font-weight:600;letter-spacing:-0.01em;line-height:1.3}
+.card-face{position:absolute;inset:0;backface-visibility:hidden;border-radius:var(--radius-lg);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 28px;text-align:center}
+.card-front-face{background:var(--c,#F59E0B);box-shadow:0 8px 32px rgba(0,0,0,0.12)}
+.card-back-face{background:var(--surface);border:2px solid var(--border);transform:rotateY(180deg);box-shadow:0 8px 32px rgba(0,0,0,0.06)}
+.card-label{font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:14px;opacity:0.7}
+.card-front-face .card-label{color:#fff}
+.card-back-face .card-label{color:var(--text3)}
+.card-text{font-size:24px;font-weight:700;letter-spacing:-0.02em;line-height:1.3}
+.card-front-face .card-text{color:#fff}
+.card-back-face .card-text{color:var(--text)}
+.card-tap-hint{font-size:12px;text-align:center;color:var(--text3);margin-bottom:16px}
 
-/* Progress bar */
-.progress-bar{height:4px;background:#E8E8E4;border-radius:99px;overflow:hidden;margin-bottom:20px}
-.progress-fill{height:100%;background:#1A1A1A;border-radius:99px;transition:width 0.3s}
+/* ── Answer buttons ── */
+.answer-btns{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px}
+.btn-wrong{padding:14px;border-radius:var(--radius-sm);background:#FFF0F0;border:2px solid #FFCECE;color:#CC4444;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;transition:transform 0.1s}
+.btn-right{padding:14px;border-radius:var(--radius-sm);background:#F0FFF8;border:2px solid #A7F0D0;color:#059669;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;transition:transform 0.1s}
+.btn-wrong:active,.btn-right:active{transform:scale(0.97)}
 
-/* Tabs */
-.tabs{display:flex;background:#F8F8F6;border-radius:10px;padding:3px;gap:3px;margin-bottom:20px}
-.tab{flex:1;padding:9px;border-radius:8px;border:none;cursor:pointer;font-family:inherit;font-size:13px;font-weight:500;background:transparent;color:#6B6B6B;transition:background 0.1s,color 0.1s}
-.tab.active{background:#fff;color:#1A1A1A;box-shadow:0 1px 4px rgba(0,0,0,0.08)}
+/* ── Complete screen ── */
+.complete-card{background:var(--surface);border:2px solid var(--border);border-radius:var(--radius-lg);padding:40px 32px;text-align:center;margin-top:40px}
+.complete-emoji{font-size:64px;margin-bottom:16px}
+.complete-title{font-size:26px;font-weight:700;letter-spacing:-0.02em;margin-bottom:8px}
+.complete-score{font-size:40px;font-weight:800;margin-bottom:6px}
+.complete-sub{font-size:14px;color:var(--text2);margin-bottom:28px}
+.complete-actions{display:flex;flex-direction:column;gap:10px}
 
-/* Upload zone */
-.upload-zone{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:36px 24px;background:#F8F8F6;border:2px dashed #E8E8E4;border-radius:12px;cursor:pointer;text-align:center}
-.upload-zone:hover{border-color:#1A1A1A}
+/* ── Add card form ── */
+.form-group{margin-bottom:16px}
+.form-label{display:block;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text3);margin-bottom:6px}
+textarea,input[type=text]{width:100%;background:var(--surface);border:2px solid var(--border);border-radius:10px;padding:12px 14px;font-size:14px;color:var(--text);font-family:inherit;outline:none;resize:vertical;line-height:1.5;transition:border-color 0.15s}
+textarea:focus,input[type=text]:focus{border-color:#F59E0B}
+textarea{min-height:80px}
 
-/* Answer buttons */
-.answer-btns{display:flex;gap:10px;margin-top:16px}
-.btn-wrong{flex:1;padding:14px;border-radius:10px;background:#FEF2F2;border:2px solid #FECACA;color:#DC2626;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
-.btn-right{flex:1;padding:14px;border-radius:10px;background:#F0FDF4;border:2px solid #BBF7D0;color:#16A34A;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
+/* ── Tabs ── */
+.tabs{display:flex;background:var(--surface2);border-radius:12px;padding:4px;gap:4px;margin-bottom:20px}
+.tab{flex:1;padding:9px 8px;border-radius:9px;border:none;cursor:pointer;font-family:inherit;font-size:13px;font-weight:500;background:transparent;color:var(--text3);transition:background 0.15s,color 0.15s}
+.tab.active{background:var(--surface);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,0.08)}
 
-/* Empty state */
-.empty{text-align:center;padding:48px 0;color:#A0A0A0}
+/* ── Upload zone ── */
+.upload-zone{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:40px 24px;background:var(--surface2);border:2px dashed var(--border);border-radius:var(--radius);cursor:pointer;text-align:center;transition:border-color 0.15s}
+.upload-zone:hover{border-color:#F59E0B}
+.upload-icon{font-size:40px}
+.upload-title{font-size:15px;font-weight:600;color:var(--text)}
+.upload-sub{font-size:13px;color:var(--text3)}
+
+/* ── Modal ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:flex-end;justify-content:center;z-index:100;padding:0}
+.modal{background:var(--surface);border-radius:24px 24px 0 0;padding:28px 24px 36px;width:100%;max-width:640px;display:flex;flex-direction:column;gap:16px}
+.modal-handle{width:36px;height:4px;background:var(--border);border-radius:99px;margin:0 auto 4px}
+.modal-title{font-size:18px;font-weight:700;text-align:center}
+.emoji-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:4px;max-height:140px;overflow-y:auto}
+.emoji-btn{background:none;border:2px solid transparent;border-radius:8px;font-size:22px;padding:4px;cursor:pointer;line-height:1;transition:border-color 0.1s,background 0.1s}
+.emoji-btn:hover{background:var(--surface2)}
+.emoji-btn.selected{border-color:#F59E0B;background:#FFFBF0}
+
+/* ── Master set ── */
+.master-topic-item{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius-sm);margin-bottom:8px;cursor:pointer;transition:border-color 0.15s}
+.master-topic-item:hover{border-color:#F59E0B}
+.master-topic-item input[type=checkbox]{width:18px;height:18px;accent-color:#F59E0B;flex-shrink:0;cursor:pointer}
+.master-section-label{font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text3);margin:16px 0 8px}
+
+/* ── Empty states ── */
+.empty{text-align:center;padding:48px 24px;color:var(--text3)}
 .empty-icon{font-size:48px;margin-bottom:12px}
-.empty-text{font-size:15px;margin-bottom:16px}
+.empty-title{font-size:16px;font-weight:600;color:var(--text2);margin-bottom:6px}
+.empty-sub{font-size:13px}
 
-/* Modal overlay */
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:flex-end;justify-content:center;z-index:100;padding:0}
-.modal{background:#fff;border-radius:16px 16px 0 0;padding:24px;width:100%;max-width:600px;display:flex;flex-direction:column;gap:14px}
-.modal-title{font-size:17px;font-weight:600;margin-bottom:2px}
-
-/* Emoji picker */
-.emoji-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:4px;max-height:160px;overflow-y:auto}
-.emoji-btn{background:none;border:2px solid transparent;border-radius:8px;font-size:22px;padding:6px;cursor:pointer;line-height:1}
-.emoji-btn.selected{border-color:#1A1A1A;background:#F8F8F6}
-.emoji-btn:hover{background:#F8F8F6}
-
-/* Chip */
-.chip{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:99px;font-size:12px;font-weight:500;background:#F2F1EE;color:#6B6B6B}
+/* ── Bottom master set button ── */
+.master-set-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;background:var(--surface);border:2px solid var(--border);border-radius:var(--radius);font-family:inherit;font-size:14px;font-weight:600;color:var(--text2);cursor:pointer;margin-top:16px;transition:border-color 0.15s,color 0.15s}
+.master-set-btn:hover{border-color:#F59E0B;color:#F59E0B}
 </style>
 </head>
 <body>
 
-<!-- SUBJECTS SCREEN -->
+<!-- SUBJECTS -->
 <div id="screen-subjects" class="screen">
-  <div class="page-header">
+  <div class="topbar">
     <div>
-      <div style="font-size:28px;margin-bottom:4px" id="app-emoji">📚</div>
-      <h1 class="page-title" id="app-title">Flash Card App</h1>
+      <div class="topbar-title">📚 Flash Cards</div>
+      <div class="topbar-sub" id="subjects-count"></div>
     </div>
-    <button class="btn btn-primary btn-sm" onclick="openCreateSubject()">+ Subject</button>
   </div>
-
-  <div id="subjects-list"></div>
-
-  <div id="subjects-empty" class="empty hidden">
-    <div class="empty-icon">📂</div>
-    <div class="empty-text">No subjects yet. Create one to get started.</div>
-  </div>
-
-  <div style="margin-top:16px">
-    <button class="btn btn-secondary" style="width:100%" onclick="show('master-set')">🎯 Create Master Study Set</button>
-  </div>
+  <div class="subjects-grid" id="subjects-grid"></div>
+  <button class="master-set-btn" onclick="show('master-set')">🎯 Create Master Study Set</button>
 </div>
 
-<!-- TOPICS SCREEN -->
+<!-- TOPICS -->
 <div id="screen-topics" class="screen hidden">
   <div class="breadcrumb">
-    <button onclick="show('subjects')">Subjects</button>
-    <span>›</span>
-    <span id="bc-subject-name" style="color:#1A1A1A;font-weight:500"></span>
+    <button class="breadcrumb-btn" onclick="show('subjects')">Subjects</button>
+    <span class="breadcrumb-sep">›</span>
+    <span class="breadcrumb-current" id="bc-subject"></span>
   </div>
-  <div class="page-header">
-    <h1 class="page-title" id="topics-title"></h1>
-    <button class="btn btn-primary btn-sm" onclick="openCreateTopic()">+ Topic</button>
+  <div class="topbar">
+    <div>
+      <div class="topbar-title" id="topics-title"></div>
+      <div class="topbar-sub" id="topics-meta"></div>
+    </div>
+    <button class="btn btn-sm btn-accent" onclick="openCreateTopic()">+ Topic</button>
   </div>
-  <div id="topics-list"></div>
+  <div class="topic-list" id="topics-list"></div>
   <div id="topics-empty" class="empty hidden">
     <div class="empty-icon">📋</div>
-    <div class="empty-text">No topics yet. Create one to organize your cards.</div>
+    <div class="empty-title">No topics yet</div>
+    <div class="empty-sub">Create a topic to start adding cards</div>
   </div>
 </div>
 
-<!-- CARDS SCREEN -->
+<!-- CARDS -->
 <div id="screen-cards" class="screen hidden">
   <div class="breadcrumb">
-    <button onclick="show('subjects')">Subjects</button>
-    <span>›</span>
-    <button onclick="openSubject(state.currentSubjectId)" id="bc-topic-subject"></button>
-    <span>›</span>
-    <span id="bc-topic-name" style="color:#1A1A1A;font-weight:500"></span>
+    <button class="breadcrumb-btn" onclick="show('subjects')">Subjects</button>
+    <span class="breadcrumb-sep">›</span>
+    <button class="breadcrumb-btn" id="bc-topic-subject" onclick="show('topics')"></button>
+    <span class="breadcrumb-sep">›</span>
+    <span class="breadcrumb-current" id="bc-topic"></span>
   </div>
-  <div class="page-header">
-    <h1 class="page-title" id="cards-title"></h1>
-    <button class="btn btn-primary btn-sm" onclick="show('add-card')">+ Add Card</button>
+  <div class="action-bar">
+    <button class="btn btn-accent" id="study-btn" onclick="startStudy()">Study Cards</button>
+    <button class="btn btn-ghost" onclick="show('add-card')">+ Add Card</button>
   </div>
-  <div id="study-btn-wrap" style="margin-bottom:16px"></div>
-  <div id="cards-list"></div>
+  <div class="card-list" id="card-list"></div>
   <div id="cards-empty" class="empty hidden">
     <div class="empty-icon">🃏</div>
-    <div class="empty-text">No cards yet. Add one to start studying.</div>
+    <div class="empty-title">No cards yet</div>
+    <div class="empty-sub">Add your first card to start studying</div>
   </div>
 </div>
 
-<!-- ADD CARD SCREEN -->
+<!-- ADD CARD -->
 <div id="screen-add-card" class="screen hidden">
   <div class="breadcrumb">
-    <button onclick="show('subjects')">Subjects</button>
-    <span>›</span>
-    <button onclick="openSubject(state.currentSubjectId)" id="bc-add-subject"></button>
-    <span>›</span>
-    <button onclick="show('cards')" id="bc-add-topic"></button>
-    <span>›</span>
-    <span style="color:#1A1A1A;font-weight:500">Add Card</span>
+    <button class="breadcrumb-btn" onclick="show('subjects')">Subjects</button>
+    <span class="breadcrumb-sep">›</span>
+    <button class="breadcrumb-btn" onclick="show('topics')" id="bc-add-subject"></button>
+    <span class="breadcrumb-sep">›</span>
+    <button class="breadcrumb-btn" onclick="show('cards')" id="bc-add-topic"></button>
+    <span class="breadcrumb-sep">›</span>
+    <span class="breadcrumb-current">Add Cards</span>
   </div>
-  <h1 class="page-title" style="margin-bottom:20px">Add Cards</h1>
-
+  <div class="topbar"><div class="topbar-title">Add Cards</div></div>
   <div class="tabs">
     <button class="tab active" id="tab-build" onclick="switchTab('build')">✏️ Build</button>
     <button class="tab" id="tab-pdf" onclick="switchTab('pdf')">📄 PDF</button>
     <button class="tab" id="tab-photo" onclick="switchTab('photo')">📷 Photo</button>
   </div>
 
-  <!-- Build tab -->
   <div id="pane-build">
-    <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:14px">
-      <div><label class="field-label">Question</label><textarea id="q-input" rows="3" placeholder="Type your question..."></textarea></div>
-      <div><label class="field-label">Answer</label><textarea id="a-input" rows="3" placeholder="Type the answer..."></textarea></div>
-    </div>
-    <div id="built-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px"></div>
-    <button class="btn btn-secondary" style="width:100%;margin-bottom:10px" onclick="addBuiltCard()">+ Add to List</button>
-    <button class="btn btn-primary" style="width:100%" id="save-built-btn" onclick="saveBuiltCards()">Save Cards</button>
+    <div class="form-group"><label class="form-label">Question</label><textarea id="q-input" placeholder="Type your question…"></textarea></div>
+    <div class="form-group"><label class="form-label">Answer</label><textarea id="a-input" placeholder="Type the answer…"></textarea></div>
+    <div id="built-list" style="margin-bottom:12px"></div>
+    <button class="btn btn-ghost btn-full" style="margin-bottom:10px" onclick="addBuiltCard()">+ Add to List</button>
+    <button class="btn btn-primary btn-full" onclick="saveBuiltCards()">Save Cards</button>
   </div>
 
-  <!-- PDF tab -->
   <div id="pane-pdf" class="hidden">
     <label class="upload-zone">
-      <span style="font-size:40px">📄</span>
-      <span style="font-size:15px;font-weight:500">Upload a PDF</span>
-      <span style="font-size:13px;color:#6B6B6B">Text will be extracted and parsed into Q&A cards</span>
+      <div class="upload-icon">📄</div>
+      <div class="upload-title">Upload a PDF</div>
+      <div class="upload-sub">We'll extract text and create Q&A cards</div>
       <input type="file" accept=".pdf" style="display:none" onchange="handlePdf(this)">
     </label>
-    <div id="pdf-status" style="margin-top:14px"></div>
+    <div id="pdf-status" style="margin-top:16px"></div>
   </div>
 
-  <!-- Photo tab -->
   <div id="pane-photo" class="hidden">
     <label class="upload-zone">
-      <span style="font-size:40px">📷</span>
-      <span style="font-size:15px;font-weight:500">Upload a Photo</span>
-      <span style="font-size:13px;color:#6B6B6B">Photo becomes the answer side of a card</span>
+      <div class="upload-icon">📷</div>
+      <div class="upload-title">Upload a Photo</div>
+      <div class="upload-sub">Photo becomes the answer side of a card</div>
       <input type="file" accept="image/*" capture="environment" style="display:none" onchange="handlePhoto(this)">
     </label>
-    <div id="photo-preview" class="hidden" style="margin-top:14px">
-      <img id="photo-img" style="width:100%;border-radius:10px;margin-bottom:10px;max-height:200px;object-fit:cover">
-      <div style="margin-bottom:10px"><label class="field-label">Question for this photo</label><input id="photo-q" placeholder="What does this show?"></div>
-      <button class="btn btn-primary" style="width:100%" onclick="savePhotoCard()">Save Photo Card</button>
+    <div id="photo-preview" class="hidden" style="margin-top:16px">
+      <img id="photo-img" style="width:100%;border-radius:12px;margin-bottom:12px;max-height:200px;object-fit:cover">
+      <div class="form-group"><label class="form-label">Question</label><input type="text" id="photo-q" placeholder="What does this show?"></div>
+      <button class="btn btn-primary btn-full" onclick="savePhotoCard()">Save Photo Card</button>
     </div>
   </div>
 </div>
 
-<!-- STUDY SCREEN -->
+<!-- STUDY -->
 <div id="screen-study" class="screen hidden">
   <div class="breadcrumb">
-    <button onclick="show('cards')" style="color:#6B6B6B">← Back</button>
+    <button class="breadcrumb-btn" onclick="show('cards')">← Back</button>
   </div>
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-    <span id="study-progress-text" style="font-size:13px;color:#6B6B6B;font-weight:500"></span>
-    <span id="study-score" style="font-size:13px;color:#1A1A1A;font-weight:600"></span>
+  <div class="study-meta">
+    <span class="study-count" id="study-count-text"></span>
+    <span class="study-score" id="study-score-text"></span>
   </div>
-  <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+  <div class="study-progress-bar"><div class="study-progress-fill" id="study-fill"></div></div>
   <div class="card-scene" onclick="flipCard()">
     <div class="card-3d" id="card-3d">
-      <div class="card-face card-front">
+      <div class="card-face card-front-face">
         <div class="card-label">Tap to flip</div>
         <div class="card-text" id="card-front-text"></div>
       </div>
-      <div class="card-face card-back">
+      <div class="card-face card-back-face">
         <div class="card-label">Answer</div>
         <div class="card-text" id="card-back-text"></div>
       </div>
     </div>
   </div>
-  <p style="text-align:center;font-size:13px;color:#A0A0A0;margin-bottom:16px">Tap the card to flip</p>
+  <div class="card-tap-hint" id="tap-hint">Tap the card to reveal the answer</div>
   <div class="answer-btns hidden" id="answer-btns">
     <button class="btn-wrong" onclick="markCard(false)">✗ Try Again</button>
     <button class="btn-right" onclick="markCard(true)">✓ Got It</button>
   </div>
 </div>
 
-<!-- COMPLETE SCREEN -->
-<div id="screen-complete" class="screen hidden" style="text-align:center;padding-top:48px">
-  <div style="font-size:64px;margin-bottom:16px" id="complete-emoji">🎉</div>
-  <h2 style="font-size:24px;font-weight:600;margin-bottom:8px" id="complete-title"></h2>
-  <p style="font-size:32px;font-weight:700;color:#1A1A1A;margin-bottom:8px" id="complete-score"></p>
-  <p style="font-size:14px;color:#6B6B6B;margin-bottom:32px" id="complete-sub"></p>
-  <div style="display:flex;flex-direction:column;gap:10px">
-    <button class="btn btn-primary" style="width:100%;padding:14px" onclick="restartStudy()">Study Again</button>
-    <button class="btn btn-secondary" style="width:100%;padding:14px" onclick="show('cards')">Back to Cards</button>
+<!-- COMPLETE -->
+<div id="screen-complete" class="screen hidden">
+  <div class="complete-card">
+    <div class="complete-emoji" id="complete-emoji">🎉</div>
+    <div class="complete-title" id="complete-title">Nice work!</div>
+    <div class="complete-score" id="complete-score"></div>
+    <div class="complete-sub" id="complete-sub"></div>
+    <div class="complete-actions">
+      <button class="btn btn-primary btn-full" style="padding:14px" onclick="restartStudy()">Study Again</button>
+      <button class="btn btn-ghost btn-full" style="padding:14px" onclick="show('cards')">Back to Cards</button>
+    </div>
   </div>
 </div>
 
-<!-- MASTER SET SCREEN -->
+<!-- MASTER SET -->
 <div id="screen-master-set" class="screen hidden">
   <div class="breadcrumb">
-    <button onclick="show('subjects')">← Subjects</button>
+    <button class="breadcrumb-btn" onclick="show('subjects')">← Subjects</button>
   </div>
-  <h1 class="page-title" style="margin-bottom:6px">Master Study Set</h1>
-  <p style="font-size:14px;color:#6B6B6B;margin-bottom:20px">Select topics to study together</p>
-  <div id="master-topic-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px"></div>
-  <button class="btn btn-primary" style="width:100%;padding:14px" id="start-master-btn" onclick="startMasterStudy()">Start Studying</button>
+  <div class="topbar">
+    <div>
+      <div class="topbar-title">🎯 Master Study Set</div>
+      <div class="topbar-sub">Select topics to study together</div>
+    </div>
+  </div>
+  <div id="master-list"></div>
+  <button class="btn btn-accent btn-full" style="padding:14px;margin-top:8px" id="master-start-btn" onclick="startMasterStudy()">Start Studying</button>
 </div>
 
 <!-- CREATE SUBJECT MODAL -->
 <div id="modal-subject" class="modal-overlay hidden" onclick="closeModal('modal-subject')">
   <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
     <div class="modal-title">New Subject</div>
+    <div class="form-group" style="margin:0"><label class="form-label">Name</label><input type="text" id="subject-name-input" placeholder="e.g. Biology, History, Spanish…"></div>
     <div>
-      <label class="field-label">Name</label>
-      <input id="subject-name-input" placeholder="e.g. Biology, History, Spanish...">
-    </div>
-    <div>
-      <label class="field-label">Emoji</label>
+      <label class="form-label">Emoji</label>
       <div class="emoji-grid" id="subject-emoji-grid"></div>
     </div>
     <div style="display:flex;gap:10px">
-      <button class="btn btn-secondary" style="flex:1" onclick="closeModal('modal-subject')">Cancel</button>
-      <button class="btn btn-primary" style="flex:1" onclick="saveSubject()">Create Subject</button>
+      <button class="btn btn-ghost" style="flex:1" onclick="closeModal('modal-subject')">Cancel</button>
+      <button class="btn btn-primary" style="flex:1" onclick="saveSubject()">Create</button>
     </div>
   </div>
 </div>
@@ -298,552 +375,483 @@ label.field-label{display:block;font-size:11px;font-weight:500;letter-spacing:0.
 <!-- CREATE TOPIC MODAL -->
 <div id="modal-topic" class="modal-overlay hidden" onclick="closeModal('modal-topic')">
   <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
     <div class="modal-title">New Topic</div>
-    <div>
-      <label class="field-label">Name</label>
-      <input id="topic-name-input" placeholder="e.g. Cell Biology, World War II...">
-    </div>
+    <div class="form-group" style="margin:0"><label class="form-label">Name</label><input type="text" id="topic-name-input" placeholder="e.g. Cell Biology, World War II…"></div>
     <div style="display:flex;gap:10px">
-      <button class="btn btn-secondary" style="flex:1" onclick="closeModal('modal-topic')">Cancel</button>
-      <button class="btn btn-primary" style="flex:1" onclick="saveTopic()">Create Topic</button>
+      <button class="btn btn-ghost" style="flex:1" onclick="closeModal('modal-topic')">Cancel</button>
+      <button class="btn btn-primary" style="flex:1" onclick="saveTopic()">Create</button>
     </div>
   </div>
 </div>
 
 <script>
 var EMOJIS = ['📚','🔬','🧬','⚗️','🧪','🌍','🗺️','📜','🏛️','🎭','🎨','🎵','🏋️','⚽','🧮','💻','🔭','🌿','🦁','🧠','💡','🔑','✏️','📝','📖','🗂️','🎯','🌟','🚀','🎓']
+var PALETTES = ['pal-0','pal-1','pal-2','pal-3','pal-4','pal-5','pal-6','pal-7']
 
-var SEED = {
-  subjects: [
-    {
-      id: 's1', title: 'Biology', emoji: '🔬',
-      topics: [
-        {
-          id: 't1', title: 'Cell Biology',
-          cards: [
-            {id:'c1',front:'What is a cell?',back:'The basic structural and functional unit of all living organisms',hint:''},
-            {id:'c2',front:'What is the nucleus?',back:'The control center of the cell containing DNA',hint:''},
-            {id:'c3',front:'What is mitosis?',back:'Cell division that produces two identical daughter cells',hint:''},
-            {id:'c4',front:'What is the mitochondria?',back:'The powerhouse of the cell — produces ATP energy',hint:''},
-            {id:'c5',front:'What is osmosis?',back:'Movement of water through a semi-permeable membrane from low to high solute concentration',hint:''}
-          ]
-        },
-        {
-          id: 't2', title: 'Genetics',
-          cards: [
-            {id:'c6',front:'What is DNA?',back:'Deoxyribonucleic acid — the molecule that carries genetic information',hint:''},
-            {id:'c7',front:'What is a gene?',back:'A segment of DNA that codes for a specific protein or trait',hint:''},
-            {id:'c8',front:'What is a chromosome?',back:'A thread-like structure made of DNA and protein that carries genes',hint:''},
-            {id:'c9',front:'What is heredity?',back:'The passing of traits from parents to offspring through genes',hint:''}
-          ]
-        }
-      ]
-    },
-    {
-      id: 's2', title: 'World History', emoji: '🌍',
-      topics: [
-        {
-          id: 't3', title: 'Ancient Civilizations',
-          cards: [
-            {id:'c10',front:'When did ancient Egypt begin?',back:'Around 3100 BCE with the unification of Upper and Lower Egypt',hint:''},
-            {id:'c11',front:'What was the Roman Empire?',back:'A powerful civilization centered in Rome that ruled much of Europe and the Mediterranean for centuries',hint:''},
-            {id:'c12',front:'What was the Silk Road?',back:'An ancient trade network connecting China to Europe, enabling exchange of goods and ideas',hint:''},
-            {id:'c13',front:'What was Mesopotamia?',back:'The region between the Tigris and Euphrates rivers — considered one of the cradles of civilization',hint:''}
-          ]
-        },
-        {
-          id: 't4', title: 'World War II',
-          cards: [
-            {id:'c14',front:'When did World War II begin?',back:'September 1, 1939, when Germany invaded Poland',hint:''},
-            {id:'c15',front:'What was D-Day?',back:'June 6, 1944 — the Allied invasion of Normandy, France',hint:''},
-            {id:'c16',front:'When did World War II end?',back:'1945 — May 8 in Europe (V-E Day) and September 2 in the Pacific (V-J Day)',hint:''},
-            {id:'c17',front:'What was the Holocaust?',back:'The systematic genocide of six million Jews and millions of others by Nazi Germany',hint:''},
-            {id:'c18',front:'Who were the Allied Powers?',back:'Primarily the United States, United Kingdom, Soviet Union, France, and China',hint:''}
-          ]
-        }
-      ]
-    }
-  ]
-}
+var SEED = {subjects:[
+  {id:'s1',title:'Biology',emoji:'🔬',palette:'pal-1',topics:[
+    {id:'t1',title:'Cell Biology',cards:[
+      {id:'c1',front:'What is a cell?',back:'The basic structural and functional unit of all living organisms'},
+      {id:'c2',front:'What is the nucleus?',back:'The control center of the cell containing DNA'},
+      {id:'c3',front:'What is mitosis?',back:'Cell division that produces two identical daughter cells'},
+      {id:'c4',front:'What is the mitochondria?',back:'The powerhouse of the cell — produces ATP energy'},
+    ]},
+    {id:'t2',title:'Genetics',cards:[
+      {id:'c5',front:'What is DNA?',back:'Deoxyribonucleic acid — the molecule that carries genetic information'},
+      {id:'c6',front:'What is a gene?',back:'A segment of DNA that codes for a specific protein or trait'},
+    ]}
+  ]},
+  {id:'s2',title:'World History',emoji:'🌍',palette:'pal-3',topics:[
+    {id:'t3',title:'Ancient Civilizations',cards:[
+      {id:'c7',front:'When did ancient Egypt begin?',back:'Around 3100 BCE with the unification of Upper and Lower Egypt'},
+      {id:'c8',front:'What was the Silk Road?',back:'An ancient trade network connecting China to Europe'},
+    ]},
+    {id:'t4',title:'World War II',cards:[
+      {id:'c9',front:'When did WWII begin?',back:'September 1, 1939, when Germany invaded Poland'},
+      {id:'c10',front:'What was D-Day?',back:'June 6, 1944 — the Allied invasion of Normandy, France'},
+    ]}
+  ]}
+]}
 
-// ── State ─────────────────────────────────────────────────────────────────────
+// ── State ──────────────────────────────────────────────────────────────────
 var state = {
-  subjects: [],
-  currentSubjectId: null,
-  currentTopicId: null,
-  studyCards: [],
-  studyIdx: 0,
-  studyCorrect: 0,
-  studyFlipped: false,
-  studyBackScreen: 'cards',
-  pendingBuiltCards: [],
-  pendingPhotoUrl: null,
-  selectedEmoji: EMOJIS[0]
+  subjects:[],
+  currentSubjectId:null,
+  currentTopicId:null,
+  studyCards:[],
+  studyIdx:0,
+  studyCorrect:0,
+  studyFlipped:false,
+  selectedEmoji:EMOJIS[0],
+  builtCards:[],
+  photoDataUrl:null,
+  masterChecked:{}
 }
 
-// ── Persistence ───────────────────────────────────────────────────────────────
-function save() {
-  localStorage.setItem('flashcard_data', JSON.stringify(state.subjects))
+// ── Persistence ─────────────────────────────────────────────────────────
+function save(){localStorage.setItem('fc_data',JSON.stringify(state.subjects))}
+function load(){
+  try{
+    var s=localStorage.getItem('fc_data')
+    state.subjects = s ? JSON.parse(s) : JSON.parse(JSON.stringify(SEED.subjects))
+    if(!s) save()
+  }catch(e){state.subjects=JSON.parse(JSON.stringify(SEED.subjects))}
 }
+function uid(){return '_'+Math.random().toString(36).slice(2,9)}
+function getSubject(id){return state.subjects.find(function(s){return s.id===id})}
+function getTopic(sId,tId){var s=getSubject(sId);return s&&s.topics.find(function(t){return t.id===tId})}
+function currentTopic(){return getTopic(state.currentSubjectId,state.currentTopicId)}
 
-function load() {
-  try {
-    var saved = localStorage.getItem('flashcard_data')
-    if (saved) {
-      state.subjects = JSON.parse(saved)
-    } else {
-      state.subjects = JSON.parse(JSON.stringify(SEED.subjects))
-      save()
-    }
-  } catch(e) {
-    state.subjects = JSON.parse(JSON.stringify(SEED.subjects))
-  }
-}
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-function uid() { return '_' + Math.random().toString(36).slice(2,10) }
-
-function getSubject(id) {
-  return state.subjects.find(function(s){ return s.id === id })
-}
-
-function getTopic(subjectId, topicId) {
-  var s = getSubject(subjectId)
-  return s ? s.topics.find(function(t){ return t.id === topicId }) : null
-}
-
-function getCurrentTopic() {
-  return getTopic(state.currentSubjectId, state.currentTopicId)
-}
-
-// ── Router ────────────────────────────────────────────────────────────────────
-var SCREENS = ['subjects','topics','cards','add-card','study','complete','master-set']
-
-function show(name) {
-  SCREENS.forEach(function(s) {
-    var el = document.getElementById('screen-' + s)
-    if (el) el.classList.add('hidden')
+// ── Router ─────────────────────────────────────────────────────────────
+var SCREENS=['subjects','topics','cards','add-card','study','complete','master-set']
+function show(name){
+  SCREENS.forEach(function(s){
+    var el=document.getElementById('screen-'+s)
+    if(el)el.classList.add('hidden')
   })
-  var el = document.getElementById('screen-' + name)
-  if (el) { el.classList.remove('hidden'); el.classList.add('fade-up') }
+  var el=document.getElementById('screen-'+name)
+  if(el){el.classList.remove('hidden');el.classList.add('fade-up')}
   window.scrollTo(0,0)
+  if(name==='subjects')renderSubjects()
+  if(name==='topics')renderTopics()
+  if(name==='cards')renderCards()
+  if(name==='master-set')renderMasterSet()
 }
 
-// ── Subjects screen ───────────────────────────────────────────────────────────
-function renderSubjects() {
-  var list = document.getElementById('subjects-list')
-  var empty = document.getElementById('subjects-empty')
-  list.innerHTML = ''
-  if (!state.subjects.length) { empty.classList.remove('hidden'); return }
-  empty.classList.add('hidden')
-  state.subjects.forEach(function(s) {
-    var topicCount = s.topics.length
-    var cardCount = s.topics.reduce(function(n,t){ return n + t.cards.length }, 0)
-    var el = document.createElement('div')
-    el.className = 'list-item'
-    el.innerHTML = '<div class="list-item-icon">' + s.emoji + '</div>' +
-      '<div class="list-item-body"><div class="list-item-title">' + s.title + '</div>' +
-      '<div class="list-item-meta">' + topicCount + ' topic' + (topicCount!==1?'s':'') + ' · ' + cardCount + ' card' + (cardCount!==1?'s':'') + '</div></div>' +
-      '<div class="list-item-arrow">›</div>'
-    el.addEventListener('click', function(){ openSubject(s.id) })
-    list.appendChild(el)
+// ── Subjects ───────────────────────────────────────────────────────────
+function renderSubjects(){
+  var grid=document.getElementById('subjects-grid')
+  grid.innerHTML=''
+  var count=document.getElementById('subjects-count')
+  count.textContent=state.subjects.length+' subject'+(state.subjects.length!==1?'s':'')
+
+  state.subjects.forEach(function(s,i){
+    var pal=s.palette||(PALETTES[i%PALETTES.length])
+    var topicCount=s.topics.length
+    var cardCount=s.topics.reduce(function(n,t){return n+t.cards.length},0)
+    var el=document.createElement('div')
+    el.className='subject-card '+pal
+    el.innerHTML='<div class="subject-card-accent"></div>'+
+      '<span class="subject-emoji">'+s.emoji+'</span>'+
+      '<div class="subject-name">'+s.title+'</div>'+
+      '<div class="subject-meta">'+topicCount+' topic'+(topicCount!==1?'s':'')+' · '+cardCount+' card'+(cardCount!==1?'s':'')+'</div>'+
+      '<div class="subject-actions">'+
+        '<button class="subject-study-btn" data-id="'+s.id+'">Study →</button>'+
+      '</div>'
+    el.addEventListener('click',function(e){
+      if(e.target.classList.contains('subject-study-btn')){
+        openSubject(s.id)
+      } else {
+        openSubject(s.id)
+      }
+    })
+    grid.appendChild(el)
   })
+
+  // Add new subject card
+  var addEl=document.createElement('div')
+  addEl.className='add-subject-card'
+  addEl.innerHTML='<div class="add-icon">+</div><div class="add-label">New Subject</div>'
+  addEl.onclick=openCreateSubject
+  grid.appendChild(addEl)
 }
 
-function openSubject(id) {
-  state.currentSubjectId = id
-  var s = getSubject(id)
-  if (!s) return
-  document.getElementById('bc-subject-name').textContent = s.title
-  document.getElementById('topics-title').textContent = s.title
-  renderTopics()
+function openSubject(id){
+  state.currentSubjectId=id
+  var s=getSubject(id)
+  if(!s)return
+  document.getElementById('bc-subject').textContent=s.title
+  document.getElementById('topics-title').textContent=s.emoji+' '+s.title
+  document.getElementById('topics-meta').textContent=s.topics.length+' topic'+(s.topics.length!==1?'s':'')
   show('topics')
 }
 
-// ── Topics screen ─────────────────────────────────────────────────────────────
-function renderTopics() {
-  var s = getSubject(state.currentSubjectId)
-  if (!s) return
-  var list = document.getElementById('topics-list')
-  var empty = document.getElementById('topics-empty')
-  list.innerHTML = ''
-  if (!s.topics.length) { empty.classList.remove('hidden'); return }
+// ── Topics ─────────────────────────────────────────────────────────────
+function renderTopics(){
+  var s=getSubject(state.currentSubjectId)
+  if(!s)return
+  var pal=s.palette||'pal-3'
+  var list=document.getElementById('topics-list')
+  var empty=document.getElementById('topics-empty')
+  list.innerHTML=''
+  if(!s.topics.length){empty.classList.remove('hidden');return}
   empty.classList.add('hidden')
-  s.topics.forEach(function(t) {
-    var el = document.createElement('div')
-    el.className = 'list-item'
-    el.innerHTML = '<div class="list-item-icon" style="font-size:18px;color:#6B6B6B">📋</div>' +
-      '<div class="list-item-body"><div class="list-item-title">' + t.title + '</div>' +
-      '<div class="list-item-meta">' + t.cards.length + ' card' + (t.cards.length!==1?'s':'') + '</div></div>' +
-      '<div class="list-item-arrow">›</div>'
-    el.addEventListener('click', function(){ openTopic(t.id) })
+  s.topics.forEach(function(t){
+    var el=document.createElement('div')
+    el.className='topic-row '+pal
+    el.innerHTML='<div class="topic-icon">📋</div>'+
+      '<div class="topic-body"><div class="topic-name">'+t.title+'</div>'+
+      '<div class="topic-meta">'+t.cards.length+' card'+(t.cards.length!==1?'s':'')+'</div></div>'+
+      '<div class="topic-arrow">›</div>'
+    el.addEventListener('click',function(){openTopic(t.id)})
     list.appendChild(el)
   })
 }
 
-function openTopic(id) {
-  state.currentTopicId = id
-  var s = getSubject(state.currentSubjectId)
-  var t = getTopic(state.currentSubjectId, id)
-  if (!t) return
-  document.getElementById('bc-topic-subject').textContent = s.title
-  document.getElementById('bc-topic-name').textContent = t.title
-  document.getElementById('bc-add-subject').textContent = s.title
-  document.getElementById('bc-add-topic').textContent = t.title
-  document.getElementById('cards-title').textContent = t.title
-  renderCards()
+function openTopic(id){
+  state.currentTopicId=id
+  var s=getSubject(state.currentSubjectId)
+  var t=getTopic(state.currentSubjectId,id)
+  if(!t)return
+  document.getElementById('bc-topic-subject').textContent=s.title
+  document.getElementById('bc-topic').textContent=t.title
+  document.getElementById('bc-add-subject').textContent=s.title
+  document.getElementById('bc-add-topic').textContent=t.title
   show('cards')
 }
 
-// ── Cards screen ──────────────────────────────────────────────────────────────
-function renderCards() {
-  var t = getCurrentTopic()
-  if (!t) return
-  var list = document.getElementById('cards-list')
-  var empty = document.getElementById('cards-empty')
-  var studyWrap = document.getElementById('study-btn-wrap')
-  list.innerHTML = ''
+// ── Cards ───────────────────────────────────────────────────────────────
+function renderCards(){
+  var t=currentTopic()
+  if(!t)return
+  var list=document.getElementById('card-list')
+  var empty=document.getElementById('cards-empty')
+  var studyBtn=document.getElementById('study-btn')
+  list.innerHTML=''
+  studyBtn.textContent='Study '+t.cards.length+' Card'+(t.cards.length!==1?'s':'')+' →'
+  studyBtn.disabled=!t.cards.length
+  studyBtn.style.opacity=t.cards.length?'1':'0.4'
 
-  studyWrap.innerHTML = t.cards.length
-    ? '<button class="btn btn-primary" style="width:100%;padding:12px" onclick="startStudy()">Study All ' + t.cards.length + ' Card' + (t.cards.length!==1?'s':'') + ' →</button>'
-    : ''
-
-  if (!t.cards.length) { empty.classList.remove('hidden'); return }
+  if(!t.cards.length){empty.classList.remove('hidden');return}
   empty.classList.add('hidden')
-  t.cards.forEach(function(c, i) {
-    var el = document.createElement('div')
-    el.className = 'card'
-    el.style.marginBottom = '10px'
-    el.innerHTML = '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">' +
-      '<div style="flex:1">' +
-        '<div style="font-size:14px;font-weight:500;margin-bottom:4px">' + c.front + '</div>' +
-        (c.back && !c.back.startsWith('<img') ? '<div style="font-size:13px;color:#6B6B6B">' + c.back + '</div>' : (c.back ? c.back : '')) +
-      '</div>' +
-      '<button class="btn-icon" onclick="deleteCard(' + i + ')" style="flex-shrink:0;color:#C0392B;border-color:#FECACA">✕</button>' +
-    '</div>'
+  t.cards.forEach(function(c,i){
+    var el=document.createElement('div')
+    el.className='card-row'
+    el.innerHTML='<div class="card-num">'+(i+1)+'</div>'+
+      '<div class="card-body"><div class="card-front">'+c.front+'</div>'+
+      '<div class="card-back">'+c.back+'</div></div>'+
+      '<button class="card-delete" data-idx="'+i+'">✕</button>'
+    el.querySelector('.card-delete').addEventListener('click',function(){
+      deleteCard(parseInt(this.getAttribute('data-idx')))
+    })
     list.appendChild(el)
   })
 }
 
-function deleteCard(idx) {
-  var t = getCurrentTopic()
-  if (!t) return
-  t.cards.splice(idx, 1)
-  save()
-  renderCards()
+function deleteCard(idx){
+  var t=currentTopic();if(!t)return
+  t.cards.splice(idx,1);save();renderCards()
 }
 
-// ── Study ─────────────────────────────────────────────────────────────────────
-function startStudy() {
-  var t = getCurrentTopic()
-  if (!t || !t.cards.length) return
-  state.studyCards = t.cards.slice().sort(function(){ return Math.random()-0.5 })
-  state.studyIdx = 0
-  state.studyCorrect = 0
-  state.studyBackScreen = 'cards'
+// ── Study ───────────────────────────────────────────────────────────────
+function startStudy(){
+  var t=currentTopic();if(!t||!t.cards.length)return
+  state.studyCards=t.cards.slice().sort(function(){return Math.random()-0.5})
+  state.studyIdx=0;state.studyCorrect=0;state.studyFlipped=false
+  var s=getSubject(state.currentSubjectId)
+  var pal=s?s.palette:'pal-3'
+  // Apply subject color to card
+  var frontFace=document.querySelector('.card-front-face')
+  // Set fill color via CSS variable
+  document.documentElement.style.setProperty('--study-color','var(--c)')
+  // Apply palette class
+  var scene=document.getElementById('card-3d')
+  PALETTES.forEach(function(p){scene.classList.remove(p)})
+  if(s)scene.classList.add(s.palette||'pal-3')
+  document.querySelector('.card-front-face').className='card-face card-front-face '+(s?s.palette:'pal-3')
+  document.querySelector('.study-progress-fill').style.background='var(--c)'
   showStudyCard()
   show('study')
 }
 
-function showStudyCard() {
-  var card = state.studyCards[state.studyIdx]
-  state.studyFlipped = false
+function showStudyCard(){
+  var card=state.studyCards[state.studyIdx]
+  state.studyFlipped=false
   document.getElementById('card-3d').classList.remove('flipped')
-  document.getElementById('card-front-text').textContent = card.front
-  document.getElementById('card-back-text').textContent = card.back && card.back.startsWith('<img') ? '(photo)' : card.back
+  document.getElementById('card-front-text').textContent=card.front
+  document.getElementById('card-back-text').textContent=card.back
   document.getElementById('answer-btns').classList.add('hidden')
-  var pct = (state.studyIdx / state.studyCards.length) * 100
-  document.getElementById('progress-fill').style.width = pct + '%'
-  document.getElementById('study-progress-text').textContent = 'Card ' + (state.studyIdx+1) + ' of ' + state.studyCards.length
-  document.getElementById('study-score').textContent = state.studyCorrect + ' correct'
+  document.getElementById('tap-hint').style.display='block'
+  var pct=(state.studyIdx/state.studyCards.length)*100
+  document.getElementById('study-fill').style.width=pct+'%'
+  document.getElementById('study-count-text').textContent='Card '+(state.studyIdx+1)+' of '+state.studyCards.length
+  document.getElementById('study-score-text').textContent=state.studyCorrect+' correct'
 }
 
-function flipCard() {
-  if (state.studyFlipped) return
-  state.studyFlipped = true
+function flipCard(){
+  if(state.studyFlipped)return
+  state.studyFlipped=true
   document.getElementById('card-3d').classList.add('flipped')
-  setTimeout(function(){ document.getElementById('answer-btns').classList.remove('hidden') }, 280)
+  document.getElementById('tap-hint').style.display='none'
+  setTimeout(function(){document.getElementById('answer-btns').classList.remove('hidden')},280)
 }
 
-function markCard(got) {
-  if (got) state.studyCorrect++
+function markCard(got){
+  if(got)state.studyCorrect++
   state.studyIdx++
-  if (state.studyIdx >= state.studyCards.length) { showComplete(); return }
+  if(state.studyIdx>=state.studyCards.length){showComplete();return}
   showStudyCard()
 }
 
-function showComplete() {
-  var pct = Math.round((state.studyCorrect / state.studyCards.length) * 100)
-  document.getElementById('complete-emoji').textContent = pct>=80?'🎉':pct>=60?'👍':'💪'
-  document.getElementById('complete-title').textContent = pct>=80?'Great work!':pct>=60?'Good effort!':'Keep at it!'
-  document.getElementById('complete-score').textContent = state.studyCorrect + ' / ' + state.studyCards.length
-  document.getElementById('complete-sub').textContent = pct + '% correct'
+function showComplete(){
+  var pct=Math.round((state.studyCorrect/state.studyCards.length)*100)
+  document.getElementById('complete-emoji').textContent=pct>=80?'🎉':pct>=60?'👍':'💪'
+  document.getElementById('complete-title').textContent=pct>=80?'Excellent work!':pct>=60?'Good effort!':'Keep practicing!'
+  document.getElementById('complete-score').textContent=state.studyCorrect+'/'+state.studyCards.length
+  document.getElementById('complete-sub').textContent=pct+'% correct'
   show('complete')
 }
 
-function restartStudy() {
-  state.studyIdx = 0
-  state.studyCorrect = 0
-  state.studyCards = state.studyCards.sort(function(){ return Math.random()-0.5 })
-  showStudyCard()
-  show('study')
+function restartStudy(){
+  state.studyIdx=0;state.studyCorrect=0
+  state.studyCards=state.studyCards.sort(function(){return Math.random()-0.5})
+  showStudyCard();show('study')
 }
 
-// ── Add Card ──────────────────────────────────────────────────────────────────
-var builtCards = []
-
-function switchTab(name) {
+// ── Add Card ────────────────────────────────────────────────────────────
+function switchTab(name){
   ['build','pdf','photo'].forEach(function(t){
-    document.getElementById('pane-'+t).classList.toggle('hidden', t!==name)
-    var btn = document.getElementById('tab-'+t)
-    btn.classList.toggle('active', t===name)
+    document.getElementById('pane-'+t).classList.toggle('hidden',t!==name)
+    var btn=document.getElementById('tab-'+t)
+    btn.classList.toggle('active',t===name)
   })
 }
 
-function addBuiltCard() {
-  var q = document.getElementById('q-input').value.trim()
-  var a = document.getElementById('a-input').value.trim()
-  if (!q || !a) { alert('Please enter both a question and an answer.'); return }
-  builtCards.push({id:uid(),front:q,back:a,hint:''})
-  document.getElementById('q-input').value = ''
-  document.getElementById('a-input').value = ''
+function addBuiltCard(){
+  var q=document.getElementById('q-input').value.trim()
+  var a=document.getElementById('a-input').value.trim()
+  if(!q||!a){alert('Please enter both a question and an answer.');return}
+  state.builtCards.push({id:uid(),front:q,back:a})
+  document.getElementById('q-input').value=''
+  document.getElementById('a-input').value=''
   document.getElementById('q-input').focus()
   renderBuiltList()
 }
 
-function renderBuiltList() {
-  var list = document.getElementById('built-list')
-  list.innerHTML = ''
-  builtCards.forEach(function(c,i){
-    var el = document.createElement('div')
-    el.className = 'card'
-    el.style.cssText = 'margin-bottom:6px;display:flex;align-items:flex-start;justify-content:space-between;gap:10px'
-    el.innerHTML = '<div style="flex:1"><div style="font-size:13px;font-weight:500;margin-bottom:3px">' + c.front + '</div><div style="font-size:12px;color:#6B6B6B">' + c.back + '</div></div>' +
-      '<button class="btn-icon" onclick="removeBuilt('+i+')" style="flex-shrink:0">✕</button>'
+function renderBuiltList(){
+  var list=document.getElementById('built-list')
+  list.innerHTML=''
+  state.builtCards.forEach(function(c,i){
+    var el=document.createElement('div')
+    el.className='card-row'
+    el.style.marginBottom='8px'
+    el.innerHTML='<div class="card-num">'+(i+1)+'</div>'+
+      '<div class="card-body"><div class="card-front">'+c.front+'</div>'+
+      '<div class="card-back">'+c.back+'</div></div>'+
+      '<button class="card-delete" data-i="'+i+'">✕</button>'
+    el.querySelector('.card-delete').addEventListener('click',function(){
+      state.builtCards.splice(parseInt(this.getAttribute('data-i')),1)
+      renderBuiltList()
+    })
     list.appendChild(el)
   })
 }
 
-function removeBuilt(i) { builtCards.splice(i,1); renderBuiltList() }
-
-function saveBuiltCards() {
-  if (!builtCards.length) { alert('Add at least one card first.'); return }
-  var t = getCurrentTopic()
-  if (!t) return
-  builtCards.forEach(function(c){ t.cards.push(c) })
-  save()
-  builtCards = []
-  renderBuiltList()
-  renderCards()
-  show('cards')
+function saveBuiltCards(){
+  if(!state.builtCards.length){alert('Add at least one card first.');return}
+  var t=currentTopic();if(!t)return
+  state.builtCards.forEach(function(c){t.cards.push(c)})
+  save();state.builtCards=[];renderBuiltList();renderCards();show('cards')
 }
 
-function handlePdf(input) {
-  var file = input.files[0]
-  if (!file) return
-  var status = document.getElementById('pdf-status')
-  status.innerHTML = '<p style="color:#6B6B6B;font-size:14px;text-align:center">Reading PDF...</p>'
-  var reader = new FileReader()
-  reader.onload = function(e) {
-    var arr = new Uint8Array(e.target.result)
-    if (typeof pdfjsLib === 'undefined') {
-      var s = document.createElement('script')
-      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js'
-      s.onload = function(){
-        pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
-        extractPdf(arr, status)
-      }
+function handlePdf(input){
+  var file=input.files[0];if(!file)return
+  var status=document.getElementById('pdf-status')
+  status.innerHTML='<p style="color:var(--text2);text-align:center">Reading PDF…</p>'
+  var reader=new FileReader()
+  reader.onload=function(e){
+    var arr=new Uint8Array(e.target.result)
+    if(typeof pdfjsLib==='undefined'){
+      var s=document.createElement('script')
+      s.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js'
+      s.onload=function(){pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';extractPdf(arr,status)}
       document.head.appendChild(s)
-    } else { extractPdf(arr, status) }
+    }else{extractPdf(arr,status)}
   }
   reader.readAsArrayBuffer(file)
 }
 
-function extractPdf(arr, status) {
+function extractPdf(arr,status){
   pdfjsLib.getDocument(arr).promise.then(function(pdf){
-    var text='', done=0
-    for(var i=1;i<=pdf.numPages;i++){
-      pdf.getPage(i).then(function(pg){
-        pg.getTextContent().then(function(tc){
-          text+=tc.items.map(function(s){return s.str}).join(' ')+'\n\n'
-          done++
-          if(done===pdf.numPages) parsePdfIntoCards(text, status)
-        })
-      })
-    }
-  }).catch(function(){
-    status.innerHTML='<p style="color:#C0392B;font-size:14px;text-align:center">Could not read this PDF.</p>'
-  })
+    var text='',done=0
+    for(var i=1;i<=pdf.numPages;i++){pdf.getPage(i).then(function(pg){pg.getTextContent().then(function(tc){
+      text+=tc.items.map(function(s){return s.str}).join(' ')+'\n\n'
+      if(++done===pdf.numPages)parsePdf(text,status)
+    })})}
+  }).catch(function(){status.innerHTML='<p style="color:#CC4444;text-align:center">Could not read this PDF.</p>'})
 }
 
-function parsePdfIntoCards(text, status) {
-  var cards=[], re=/Q\s*:\s*([\s\S]*?)A\s*:\s*([\s\S]*?)(?=Q\s*:|$)/gi, m
+function parsePdf(text,status){
+  var cards=[],re=/Q\s*:\s*([\s\S]*?)A\s*:\s*([\s\S]*?)(?=Q\s*:|$)/gi,m
   while((m=re.exec(text))!==null){
-    var f=m[1].trim().replace(/\s+/g,' '), b=m[2].trim().replace(/\s+/g,' ')
-    if(f&&b&&f.length<300&&b.length<300) cards.push({id:uid(),front:f,back:b,hint:''})
+    var f=m[1].trim().replace(/\s+/g,' '),b=m[2].trim().replace(/\s+/g,' ')
+    if(f&&b&&f.length<300&&b.length<300)cards.push({id:uid(),front:f,back:b})
   }
-  if(!cards.length){
-    text.split(/\n\s*\n/).forEach(function(block){
-      var lines=block.trim().split('\n').filter(function(l){return l.trim()})
-      if(lines.length===2) cards.push({id:uid(),front:lines[0].trim(),back:lines[1].trim(),hint:''})
-    })
-  }
-  if(!cards.length){ status.innerHTML='<p style="color:#C0392B;font-size:14px;text-align:center">No Q&A pairs found in PDF.</p>'; return }
-  var t=getCurrentTopic(); if(!t) return
+  if(!cards.length){status.innerHTML='<p style="color:#CC4444;text-align:center">No Q&A pairs found.</p>';return}
+  var t=currentTopic();if(!t)return
   cards.forEach(function(c){t.cards.push(c)})
-  save(); renderCards()
-  status.innerHTML='<p style="color:#2D7D52;font-size:14px;text-align:center;font-weight:500">✓ '+cards.length+' cards imported</p>'
+  save();renderCards()
+  status.innerHTML='<p style="color:#059669;text-align:center;font-weight:600">✓ '+cards.length+' cards imported</p>'
   setTimeout(function(){show('cards')},1200)
 }
 
-function handlePhoto(input) {
-  var file=input.files[0]; if(!file) return
+function handlePhoto(input){
+  var file=input.files[0];if(!file)return
   var reader=new FileReader()
   reader.onload=function(e){
-    state.pendingPhotoUrl=e.target.result
+    state.photoDataUrl=e.target.result
     document.getElementById('photo-img').src=e.target.result
     document.getElementById('photo-preview').classList.remove('hidden')
   }
   reader.readAsDataURL(file)
 }
 
-function savePhotoCard() {
-  if(!state.pendingPhotoUrl) return
+function savePhotoCard(){
+  if(!state.photoDataUrl)return
   var q=document.getElementById('photo-q').value.trim()||'What does this image show?'
-  var t=getCurrentTopic(); if(!t) return
-  t.cards.push({id:uid(),front:q,back:'<img src="'+state.pendingPhotoUrl+'" style="max-width:100%;border-radius:8px">',hint:'',isImage:true})
-  save(); renderCards()
-  state.pendingPhotoUrl=null
+  var t=currentTopic();if(!t)return
+  t.cards.push({id:uid(),front:q,back:'<img src="'+state.photoDataUrl+'" style="max-width:100%;border-radius:8px">'})
+  save();renderCards();state.photoDataUrl=null
   document.getElementById('photo-preview').classList.add('hidden')
   document.getElementById('photo-q').value=''
   show('cards')
 }
 
-// ── Master Set ────────────────────────────────────────────────────────────────
-var masterSelected = {}
-
-function renderMasterSet() {
-  masterSelected = {}
-  var list = document.getElementById('master-topic-list')
-  list.innerHTML = ''
-  var btn = document.getElementById('start-master-btn')
-
+// ── Master Set ──────────────────────────────────────────────────────────
+function renderMasterSet(){
+  state.masterChecked={}
+  var list=document.getElementById('master-list')
+  list.innerHTML=''
   state.subjects.forEach(function(s){
-    var heading = document.createElement('div')
-    heading.style.cssText = 'font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#A0A0A0;margin:12px 0 6px'
-    heading.textContent = s.emoji + ' ' + s.title
-    list.appendChild(heading)
-
+    var label=document.createElement('div')
+    label.className='master-section-label'
+    label.textContent=s.emoji+' '+s.title
+    list.appendChild(label)
     s.topics.forEach(function(t){
-      var id = s.id+'_'+t.id
-      var el = document.createElement('label')
-      el.style.cssText = 'display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid #E8E8E4;border-radius:10px;cursor:pointer;margin-bottom:6px'
-      el.innerHTML = '<input type="checkbox" id="mc_'+id+'" style="width:16px;height:16px;flex-shrink:0;accent-color:#1A1A1A" onchange="updateMasterBtn()">' +
-        '<div><div style="font-size:14px;font-weight:500">'+t.title+'</div><div style="font-size:12px;color:#6B6B6B">'+t.cards.length+' cards</div></div>'
-      masterSelected[id] = {subject:s.id, topic:t.id}
+      var key=s.id+'_'+t.id
+      state.masterChecked[key]=false
+      var el=document.createElement('label')
+      el.className='master-topic-item'
+      el.innerHTML='<input type="checkbox" id="mc_'+key+'" onchange="updateMasterBtn()">'+
+        '<div><div style="font-size:14px;font-weight:600">'+t.title+'</div>'+
+        '<div style="font-size:12px;color:var(--text3)">'+t.cards.length+' cards</div></div>'
       list.appendChild(el)
     })
   })
   updateMasterBtn()
 }
 
-function updateMasterBtn() {
-  var count = 0
-  Object.keys(masterSelected).forEach(function(id){
-    if(document.getElementById('mc_'+id)&&document.getElementById('mc_'+id).checked) count++
+function updateMasterBtn(){
+  var count=0
+  Object.keys(state.masterChecked).forEach(function(k){
+    if(document.getElementById('mc_'+k)&&document.getElementById('mc_'+k).checked)count++
   })
-  var btn = document.getElementById('start-master-btn')
-  btn.textContent = count ? 'Study '+count+' Topic'+(count!==1?'s':'')+' Together' : 'Start Studying'
-  btn.disabled = !count
+  var btn=document.getElementById('master-start-btn')
+  btn.textContent=count?'Study '+count+' Topic'+(count!==1?'s':'')+' Together':'Select topics to start'
+  btn.disabled=!count
+  btn.style.opacity=count?'1':'0.5'
 }
 
-function startMasterStudy() {
-  var cards = []
-  Object.keys(masterSelected).forEach(function(id){
-    var el = document.getElementById('mc_'+id)
-    if(el && el.checked){
-      var info = masterSelected[id]
-      var t = getTopic(info.subject, info.topic)
-      if(t) t.cards.forEach(function(c){ cards.push(c) })
+function startMasterStudy(){
+  var cards=[]
+  Object.keys(state.masterChecked).forEach(function(k){
+    var el=document.getElementById('mc_'+k)
+    if(el&&el.checked){
+      var parts=k.split('_')
+      var t=getTopic(parts[0],parts[1])
+      if(t)t.cards.forEach(function(c){cards.push(c)})
     }
   })
-  if(!cards.length) return
-  state.studyCards = cards.sort(function(){return Math.random()-0.5})
-  state.studyIdx = 0
-  state.studyCorrect = 0
-  state.studyBackScreen = 'master-set'
-  showStudyCard()
-  show('study')
+  if(!cards.length)return
+  state.studyCards=cards.sort(function(){return Math.random()-0.5})
+  state.studyIdx=0;state.studyCorrect=0;state.studyFlipped=false
+  showStudyCard();show('study')
 }
 
-// ── Create Subject Modal ──────────────────────────────────────────────────────
-function openCreateSubject() {
-  state.selectedEmoji = EMOJIS[0]
-  document.getElementById('subject-name-input').value = ''
-  var grid = document.getElementById('subject-emoji-grid')
-  grid.innerHTML = ''
+// ── Subject modal ───────────────────────────────────────────────────────
+function openCreateSubject(){
+  state.selectedEmoji=EMOJIS[0]
+  document.getElementById('subject-name-input').value=''
+  var grid=document.getElementById('subject-emoji-grid')
+  grid.innerHTML=''
   EMOJIS.forEach(function(e,i){
-    var btn = document.createElement('button')
-    btn.className = 'emoji-btn' + (i===0?' selected':'')
-    btn.textContent = e
-    btn.onclick = function(){
-      state.selectedEmoji = e
-      grid.querySelectorAll('.emoji-btn').forEach(function(b){ b.classList.remove('selected') })
+    var btn=document.createElement('button')
+    btn.className='emoji-btn'+(i===0?' selected':'')
+    btn.textContent=e
+    btn.onclick=function(){
+      state.selectedEmoji=e
+      grid.querySelectorAll('.emoji-btn').forEach(function(b){b.classList.remove('selected')})
       btn.classList.add('selected')
     }
     grid.appendChild(btn)
   })
   document.getElementById('modal-subject').classList.remove('hidden')
-  setTimeout(function(){ document.getElementById('subject-name-input').focus() },100)
+  setTimeout(function(){document.getElementById('subject-name-input').focus()},100)
 }
 
-function saveSubject() {
-  var name = document.getElementById('subject-name-input').value.trim()
-  if (!name) { alert('Please enter a subject name.'); return }
-  state.subjects.push({id:uid(), title:name, emoji:state.selectedEmoji, topics:[]})
-  save()
-  renderSubjects()
-  closeModal('modal-subject')
+function saveSubject(){
+  var name=document.getElementById('subject-name-input').value.trim()
+  if(!name){alert('Please enter a name.');return}
+  var palette=PALETTES[state.subjects.length%PALETTES.length]
+  state.subjects.push({id:uid(),title:name,emoji:state.selectedEmoji,palette:palette,topics:[]})
+  save();renderSubjects();closeModal('modal-subject')
 }
 
-// ── Create Topic Modal ────────────────────────────────────────────────────────
-function openCreateTopic() {
-  document.getElementById('topic-name-input').value = ''
+// ── Topic modal ─────────────────────────────────────────────────────────
+function openCreateTopic(){
+  document.getElementById('topic-name-input').value=''
   document.getElementById('modal-topic').classList.remove('hidden')
-  setTimeout(function(){ document.getElementById('topic-name-input').focus() },100)
+  setTimeout(function(){document.getElementById('topic-name-input').focus()},100)
 }
 
-function saveTopic() {
-  var name = document.getElementById('topic-name-input').value.trim()
-  if (!name) { alert('Please enter a topic name.'); return }
-  var s = getSubject(state.currentSubjectId)
-  if (!s) return
-  var t = {id:uid(), title:name, cards:[]}
-  s.topics.push(t)
-  save()
-  renderTopics()
+function saveTopic(){
+  var name=document.getElementById('topic-name-input').value.trim()
+  if(!name){alert('Please enter a name.');return}
+  var s=getSubject(state.currentSubjectId);if(!s)return
+  s.topics.push({id:uid(),title:name,cards:[]})
+  save();renderTopics()
+  document.getElementById('topics-meta').textContent=s.topics.length+' topic'+(s.topics.length!==1?'s':'')
   closeModal('modal-topic')
 }
 
-function closeModal(id) {
-  document.getElementById(id).classList.add('hidden')
-}
+function closeModal(id){document.getElementById(id).classList.add('hidden')}
 
-// ── Handle enter key in modals ────────────────────────────────────────────────
-document.getElementById('subject-name-input').addEventListener('keydown',function(e){if(e.key==='Enter') saveSubject()})
-document.getElementById('topic-name-input').addEventListener('keydown',function(e){if(e.key==='Enter') saveTopic()})
+// ── Enter key support ───────────────────────────────────────────────────
+document.getElementById('subject-name-input').addEventListener('keydown',function(e){if(e.key==='Enter')saveSubject()})
+document.getElementById('topic-name-input').addEventListener('keydown',function(e){if(e.key==='Enter')saveTopic()})
 
-// ── Override show for screens needing render ──────────────────────────────────
-var _show = show
-show = function(name) {
-  _show(name)
-  if (name === 'subjects') renderSubjects()
-  if (name === 'topics') renderTopics()
-  if (name === 'cards') renderCards()
-  if (name === 'master-set') renderMasterSet()
-}
-
-// ── Init ──────────────────────────────────────────────────────────────────────
+// ── Init ─────────────────────────────────────────────────────────────────
 load()
 show('subjects')
 </script>
