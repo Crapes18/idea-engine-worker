@@ -1,7 +1,6 @@
 import express from 'express'
 import { generateGameData, generateReleaseNotes } from './lib/generate.js'
-import { generateQuizExplorerContent, generateLandingPageContent, generateFlashcardContent } from './lib/content-gen.js'
-import { applyTemplate, detectTemplate, TEMPLATE_IDS } from './lib/templates.js'
+import { generateHtmlWithClaude } from './lib/generate-html.js'
 import { validateHTML } from './lib/validate.js'
 import { patchAndValidate } from './lib/patcher.js'
 import { createRepo, pushFiles, repoUrl, readFile, updateFile, enableGitHubPages } from './lib/github.js'
@@ -120,9 +119,8 @@ function retrigger(ideaId, jobType, founderNotes) {
 recoverStuckBuilds(retrigger).catch(() => {})
 setInterval(() => recoverStuckBuilds(retrigger).catch(() => {}), 10 * 60 * 1000)
 
-async function buildFromTemplate(ideaId, { founderNotes, founderAvoid, imageUrls, monetization, isRevision = false } = {}) {
+async function buildWithClaude(ideaId, { founderNotes, founderAvoid, isRevision = false } = {}) {
   const label = isRevision ? 'revise' : 'prototype'
-  console.log(`[${label}] Starting for idea ${ideaId}`)
 
   const [idea, brief] = await Promise.all([getIdea(ideaId), getBrief(ideaId)])
   if (!idea) throw new Error('Idea not found')
@@ -130,27 +128,31 @@ async function buildFromTemplate(ideaId, { founderNotes, founderAvoid, imageUrls
   await setStatus(ideaId, 'building')
   await log(ideaId, label, idea.name, 'started', `Build started — ${isRevision ? 'revision' : 'first prototype'}`)
 
-  // 1. Detect which template to use based on idea type
-  const templateId = detectTemplate(brief, founderNotes, idea.name)
-  await log(ideaId, label, idea.name, 'template_selected', `Using template: ${templateId}`)
-
-  // 2. Generate content JSON for the chosen template
-  await log(ideaId, label, idea.name, 'generating_content', 'Generating content with Claude...')
-  let appData
-  if (templateId === TEMPLATE_IDS.FLASHCARD_APP) {
-    appData = await generateFlashcardContent({ name: idea.name, brief, founderNotes, founderAvoid })
-  } else if (templateId === TEMPLATE_IDS.QUIZ_EXPLORER) {
-    appData = await generateQuizExplorerContent({ name: idea.name, brief, founderNotes, founderAvoid, imageUrls })
-  } else {
-    appData = await generateLandingPageContent({ name: idea.name, brief, founderNotes, founderAvoid })
+  // For revisions, read current HTML from Supabase
+  let currentHtml = null
+  if (isRevision) {
+    try {
+      const sb = (await import('@supabase/supabase-js')).createClient(
+        process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY
+      )
+      const { data } = await sb.from('prototypes').select('html')
+        .eq('idea_id', ideaId).order('created_at', { ascending: false }).limit(1).single()
+      if (data?.html) {
+        currentHtml = data.html
+        await log(ideaId, label, idea.name, 'read_current', `Read current HTML from Supabase — ${currentHtml.length} chars`)
+      } else {
+        await log(ideaId, label, idea.name, 'read_current', 'No existing prototype — generating from scratch')
+      }
+    } catch (e) {
+      await log(ideaId, label, idea.name, 'read_current', 'Could not read prototype — generating from scratch')
+    }
   }
-  await log(ideaId, label, idea.name, 'content_generated', `Content ready: ${appData.careers?.length || 0} careers, ${appData.categories?.length || 0} categories`)
 
-  // 3. Apply template
-  await log(ideaId, label, idea.name, 'applying_template', 'Injecting content into HTML template...')
-  const html = applyTemplate(templateId, appData)
+  // Generate the complete HTML with Claude
+  await log(ideaId, label, idea.name, 'generating', 'Generating complete app HTML with Claude...')
+  const html = await generateHtmlWithClaude({ idea, brief, founderNotes, founderAvoid, currentHtml })
 
-  // 4. Validate generated HTML
+  // Validate
   await log(ideaId, label, idea.name, 'validating', 'Running JS syntax validation...')
   const validation = validateHTML(html)
   if (!validation.valid) {
@@ -158,41 +160,34 @@ async function buildFromTemplate(ideaId, { founderNotes, founderAvoid, imageUrls
   }
   await log(ideaId, label, idea.name, 'validated', `Validation passed — ${html.length} chars`)
 
-  const files = [
-    { path: 'index.html', content: html },
-    { path: 'vercel.json', content: JSON.stringify({ buildCommand: '', outputDirectory: '.' }, null, 2) },
-  ]
+  // Save to Supabase prototypes table
+  await log(ideaId, label, idea.name, 'saving', 'Saving prototype to Supabase...')
+  const sb = (await import('@supabase/supabase-js')).createClient(
+    process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY
+  )
+  const { error: saveErr } = await sb.from('prototypes').insert({ idea_id: ideaId, slug: idea.slug, html })
+  if (saveErr) throw new Error(`Failed to save prototype: ${saveErr.message}`)
 
-  // 5. Create/update GitHub repo
-  await log(ideaId, label, idea.name, 'github_push', `Pushing to GitHub repo: ${idea.slug}`)
-  await createRepo(idea.slug, idea.one_liner || idea.name)
-  const { repoUrl: githubUrl, commitSha, commitUrl } = await pushFiles(idea.slug, files)
-  await log(ideaId, label, idea.name, 'github_pushed', `Pushed to ${githubUrl}`)
+  const appUrl = process.env.DASHBOARD_URL || 'https://dashboard-jason-crepeau-s-projects.vercel.app'
+  const deployUrl = `${appUrl}/p/${idea.slug}`
+  await log(ideaId, label, idea.name, 'saved', `Prototype saved — ${deployUrl}`)
 
-  // 6. Enable GitHub Pages
-  await log(ideaId, label, idea.name, 'pages_deploy', 'Enabling GitHub Pages and waiting for URL to go live...')
-  const deployUrl = await enableGitHubPages(idea.slug)
-  await log(ideaId, label, idea.name, 'pages_live', `Live at: ${deployUrl}`)
-
-  // 7. Create approval — include commit info so dashboard can show what changed
   const changesSummary = founderNotes
     ? founderNotes.slice(0, 400)
     : (isRevision ? 'Prototype revised.' : 'First prototype built.')
-
-  const summary = isRevision
-    ? `"${idea.name}" revised prototype is live. Review and approve to advance, or request further changes.`
-    : `"${idea.name}" prototype is live and ready for review.`
 
   await createApproval({
     ideaId,
     stage: 'prototype',
     type: 'prototype',
-    summary,
-    payload: { deployUrl, githubUrl, commitSha, commitUrl, templateId, isRevision, changesSummary },
+    summary: isRevision
+      ? `"${idea.name}" revised prototype is ready. Review and approve to advance, or request further changes.`
+      : `"${idea.name}" prototype is ready for review.`,
+    payload: { deployUrl, isRevision, changesSummary },
   })
 
   await setStatus(ideaId, 'in_review', null)
-  await logSuccess(ideaId, label, idea.name, `Done — live at ${deployUrl}`)
+  await logSuccess(ideaId, label, idea.name, `Done — available at ${deployUrl}`)
 }
 
 async function patchPrototype(ideaId, { spec, previousDeployUrl } = {}) {
@@ -256,11 +251,11 @@ async function patchPrototype(ideaId, { spec, previousDeployUrl } = {}) {
 }
 
 async function buildPrototype(ideaId, opts = {}) {
-  return buildFromTemplate(ideaId, { ...opts, isRevision: false })
+  return buildWithClaude(ideaId, { ...opts, isRevision: false })
 }
 
 async function revisePrototype(ideaId, opts = {}) {
-  return buildFromTemplate(ideaId, { ...opts, isRevision: true })
+  return buildWithClaude(ideaId, { ...opts, isRevision: true })
 }
 
 async function addGame(ideaId, gameName, gameDescription) {
